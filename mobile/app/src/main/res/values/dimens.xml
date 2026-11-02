@@ -16,21 +16,31 @@
     <dimen name="page_margin_top">32dp</dimen>
 
     <!-- ── Corner radii ── -->
-    <dimen name="radius_sm">12dp</dimen>
-    <dimen name="radius_md">16dp</dimen>
-    <dimen name="radius_lg">20dp</dimen>
-    <dimen name="radius_xl">24dp</dimen>
+    <!-- Label tape is a cut strip: small corners, never pills (except dots) -->
+    <dimen name="radius_sm">4dp</dimen>
+    <dimen name="radius_md">6dp</dimen>
+    <dimen name="radius_lg">8dp</dimen>
+    <dimen name="radius_xl">12dp</dimen>
     <dimen name="radius_pill">100dp</dimen>
     <dimen name="radius_circle">200dp</dimen>
 
-    <!-- ── Text sizes (accessibility-friendly) ── -->
-    <dimen name="text_display">32sp</dimen>
-    <dimen name="text_headline">26sp</dimen>
-    <dimen name="text_title">22sp</dimen>
-    <dimen name="text_body_lg">18sp</dimen>
-    <dimen name="text_body">16sp</dimen>
-    <dimen name="text_caption">14sp</dimen>
-    <dimen name="text_small">12sp</dimen>
+    <!-- ── Text sizes: body floor 20sp, all sp so they follow font scale ── -->
+    <dimen name="text_display">36sp</dimen>
+    <dimen name="text_headline">30sp</dimen>
+    <dimen name="text_title">26sp</dimen>
+    <dimen name="text_body_lg">22sp</dimen>
+    <dimen name="text_body">20sp</dimen>
+    <dimen name="text_caption">16sp</dimen>
+    <dimen name="text_small">14sp</dimen>
+
+    <!-- ── Tape strips and braille cell ── -->
+    <dimen name="tape_min_height">92dp</dimen>
+    <dimen name="tape_gap">12dp</dimen>
+    <dimen name="tape_edge">2dp</dimen>
+    <dimen name="sos_gap">34dp</dimen>
+    <dimen name="sos_outline_width">4dp</dimen>
+    <dimen name="braille_dot">12dp</dimen>
+    <dimen name="braille_dot_gap">7dp</dimen>
 
     <!-- ── Focus outlines (keyboard / switch access) ── -->
     <dimen name="focus_ring_width">3dp</dimen>

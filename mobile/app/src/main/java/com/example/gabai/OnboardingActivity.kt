@@ -2,7 +2,6 @@ package com.example.gabai
 
 import android.Manifest
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
@@ -15,6 +14,7 @@ import com.example.gabai.services.TtsService
 import com.example.gabai.services.VisionProfile
 import com.example.gabai.services.VisionProfileStore
 import com.example.gabai.services.VisionProfiles
+import com.example.gabai.ui.Ui
 import java.util.Locale
 
 /**
@@ -213,19 +213,21 @@ class OnboardingActivity : BaseActivity() {
 
         val btn = TextView(this).apply {
             text = title
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(ContextCompat.getColor(this@OnboardingActivity, R.color.on_tape))
             textSize = 20f
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            typeface = Ui.font(this@OnboardingActivity, true)
             gravity = android.view.Gravity.CENTER
             isClickable = true
             isFocusable = true
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             contentDescription = "$title. $desc. Double-tap to choose."
             minimumHeight = (104 * d).toInt()
-            background = android.graphics.drawable.GradientDrawable().apply {
+            // Same cut-tape strip as Home: small corners, 3dp focus ring when focused.
+            val strip = android.graphics.drawable.GradientDrawable().apply {
                 setColor(ContextCompat.getColor(this@OnboardingActivity, colorRes))
-                cornerRadius = resources.getDimensionPixelSize(R.dimen.radius_pill).toFloat()
+                cornerRadius = resources.getDimensionPixelSize(R.dimen.radius_md).toFloat()
             }
+            background = strip
             foreground = ContextCompat.getDrawable(this@OnboardingActivity, ripple.resourceId)
             setPadding(
                 resources.getDimensionPixelSize(R.dimen.space_xl), 0,
@@ -244,6 +246,10 @@ class OnboardingActivity : BaseActivity() {
             chooseProfile(profileId)
         }
         btn.setOnFocusChangeListener { _, hasFocus ->
+            (btn.background as? android.graphics.drawable.GradientDrawable)?.setStroke(
+                if (hasFocus) resources.getDimensionPixelSize(R.dimen.focus_ring_width) else 0,
+                ContextCompat.getColor(this, R.color.focus_ring),
+            )
             if (hasFocus) tts.speak("$title. $desc.")
         }
         return btn

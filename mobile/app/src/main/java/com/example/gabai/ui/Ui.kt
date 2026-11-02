@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import com.example.gabai.R
 
@@ -21,7 +22,7 @@ enum class Level(val symbol: String, val word: String, val color: Int) {
 }
 
 /**
- * Code-built widgets in the app design system (cream canvas, white cards, terracotta accent, 8 dp grid, 48 dp+ targets).
+ * Code-built widgets in the app design system (Label Tape: near-black or cool-white canvas, seamed panels, white/ink primary, 8 dp grid, 48 dp+ targets).
  * Building them here keeps the caregiver screens and the blind user's screens on the same tokens.
  */
 object Ui {
@@ -29,6 +30,10 @@ object Ui {
     fun dp(c: Context, v: Int) = (v * c.resources.displayMetrics.density).toInt()
 
     fun color(c: Context, res: Int) = ContextCompat.getColor(c, res)
+
+    /** Atkinson Hyperlegible, the app face; falls back to the system sans if the font cannot load. */
+    fun font(c: Context, bold: Boolean): Typeface =
+        ResourcesCompat.getFont(c, if (bold) R.font.atkinson_bold else R.font.atkinson_regular) ?: Typeface.SANS_SERIF
 
     fun column(c: Context, pad: Int = 0) = LinearLayout(c).apply {
         orientation = LinearLayout.VERTICAL
@@ -47,7 +52,7 @@ object Ui {
         text = s
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
         setTextColor(color(c, colorRes))
-        typeface = if (bold) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.SANS_SERIF
+        typeface = font(c, bold)
         setLineSpacing(0f, 1.2f)
     }
 
@@ -56,10 +61,9 @@ object Ui {
     fun body(c: Context, s: CharSequence) = text(c, s, 16f, R.color.body)
     fun caption(c: Context, s: CharSequence) = text(c, s, 14f, R.color.muted)
 
-    /** White rounded card with a heading; add children to the returned column. */
+    /** Seamed panel with a heading; add children to the returned column. */
     fun card(c: Context, headingText: String? = null): LinearLayout = column(c, 16).apply {
         setBackgroundResource(R.drawable.bg_card_cream)
-        elevation = dp(c, 2).toFloat()
         if (headingText != null) addView(heading(c, headingText), lp(ctx = c))
     }
 
@@ -81,7 +85,7 @@ object Ui {
         text = "${level.symbol} $label"
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         setTextColor(color(c, level.color))
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = font(c, true)
         setBackgroundResource(R.drawable.bg_chip)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
@@ -94,7 +98,7 @@ object Ui {
         minHeight = dp(c, 64)
         setPadding(dp(c, 16), dp(c, 12), dp(c, 16), dp(c, 12))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = font(c, true)
         setTextColor(color(c, if (kind == Kind.SECONDARY) R.color.ink else R.color.on_primary))
         setBackgroundResource(when (kind) {
             Kind.PRIMARY -> R.drawable.bg_btn_primary_focusable

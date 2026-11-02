@@ -1,73 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- ==================================================================
-         GabAi design tokens — TESLA DARK palette (system dark mode =
-         the app's default look). Pure-black canvas, white text, one
-         electric-blue accent. All text/background pairs >= WCAG AAA
-         7:1 for normal text, >= 4.5:1 for >=20sp bold UI text.
-         See mobile/DESIGN_SYSTEM.md for measured ratios.
+         GabAi tokens, Label Tape world, DARK (the default look).
+         Near-black ground, tape hues at full strength, white as the
+         neutral primary. Colour names the module, never decorates:
+         blue=Navigate green=Read amber=Colour violet=Family red=SOS only.
+         Every name exists in values/ and values-night/ with the same set.
          ================================================================== -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- ── Surfaces: pure black + deep-charcoal cards (separation
-         through spacing + subtle value, never borders or shadows) ── -->
-    <color name="canvas">#FF000000</color>
-    <color name="canvas_secondary">#FF0A0A0A</color>
-    <color name="surface_card">#FF141414</color>
-    <color name="surface_card_elevated">#FF1C1C1C</color>
-    <color name="surface_dark">#FF000000</color>
-    <color name="surface_dark_elevated">#FF141414</color>
-    <color name="surface_dark_card">#FF1C1C1C</color>
+    <!-- ── Surfaces ── -->
+    <color name="canvas">#FF0E0F12</color>
+    <color name="canvas_secondary">#FF15171B</color>
+    <color name="surface_card">#FF1A1C21</color>
+    <color name="surface_card_elevated">#FF23252B</color>
+    <color name="surface_dark">#FF0E0F12</color>
+    <color name="surface_dark_elevated">#FF1A1C21</color>
+    <color name="surface_dark_card">#FF23252B</color>
 
-    <!-- ── Hairlines & Dividers (decorative only) ── -->
-    <color name="hairline">#1FFFFFFF</color>
-    <color name="hairline_dark">#1FFFFFFF</color>
+    <!-- ── Seams (3:1 against canvas so panels stay visible at low vision) ── -->
+    <color name="hairline">#FF646872</color>
+    <color name="hairline_dark">#FF646872</color>
 
-    <!-- ── Text: white-on-black, all >= 8:1 ── -->
-    <color name="ink">#FFFFFFFF</color>            <!-- 21.0:1 on black -->
-    <color name="body">#FFE0E0E0</color>           <!-- 15.6:1 -->
-    <color name="muted">#FFA3A3A3</color>          <!--  8.4:1 -->
+    <!-- ── Text ── -->
+    <color name="ink">#FFFFFFFF</color>            <!-- 19.2:1 on canvas -->
+    <color name="body">#FFE4E6EB</color>           <!-- 15.4:1 -->
+    <color name="muted">#FFA9AEB8</color>          <!--  8.6:1 -->
     <color name="on_dark">#FFFFFFFF</color>
-    <color name="on_dark_soft">#FFE0E0E0</color>
-    <color name="on_dark_muted">#FFA3A3A3</color>
+    <color name="on_dark_soft">#FFE4E6EB</color>
+    <color name="on_dark_muted">#FFA9AEB8</color>
 
-    <!-- ── Primary accent (#3E6AE1 fill for big buttons — 4.6:1 white
-         text = AAA large-text; #7C9BFF for small accents/focus —
-         ~8:1 on black) ── -->
-    <color name="primary">#FF3E6AE1</color>
-    <color name="primary_light">#FF5B7FE8</color>
-    <color name="primary_active">#FF2F56C4</color>
-    <color name="primary_soft">#1A3E6AE1</color>
-    <color name="on_primary">#FFFFFFFF</color>
-    <color name="focus_ring">#FF7C9BFF</color>      <!-- ~8.0:1 on black -->
+    <!-- ── Primary = white tape with ink text; module hues stay exclusive ── -->
+    <color name="primary">#FFFFFFFF</color>
+    <color name="primary_light">#FFE4E6EB</color>
+    <color name="primary_active">#FFC9CDD6</color>
+    <color name="primary_soft">#1FFFFFFF</color>
+    <color name="on_primary">#FF0E0F12</color>
+    <color name="focus_ring">#FF9DB4FF</color>      <!-- 9.5:1 on canvas -->
 
-    <!-- ── Semantic (AAA on black — brightened for contrast) ── -->
-    <color name="status_success">#FF4CAF50</color>  <!-- ~7.4:1 -->
-    <color name="status_warning">#FFFFB340</color>  <!-- ~10.5:1 -->
-    <color name="status_error">#FFFF5B4D</color>    <!-- ~7.8:1 -->
-    <color name="status_info">#FF7C9BFF</color>
+    <!-- ── Semantic ── -->
+    <color name="status_success">#FF5FD08A</color>  <!-- 9.9:1 -->
+    <color name="status_warning">#FFFFC83D</color>  <!-- 12.4:1 -->
+    <color name="status_error">#FFFF6B5E</color>    <!-- 6.9:1 -->
+    <color name="status_info">#FF9DB4FF</color>
 
-    <!-- ── Solid (gradients banned) ── -->
-    <color name="gradient_warm_start">#FF000000</color>
-    <color name="gradient_warm_end">#FF000000</color>
-    <color name="gradient_nav_start">#FF000000</color>
-    <color name="gradient_nav_end">#FF000000</color>
+    <!-- ── Tape: module strips (white text on all but amber) ── -->
+    <color name="tape_navigate">#FF2A52E8</color>   <!-- white 6.1:1, vs canvas 3.2:1 -->
+    <color name="tape_read">#FF0F7A43</color>       <!-- white 5.4:1, vs canvas 3.6:1 -->
+    <color name="tape_colour">#FFF5C400</color>     <!-- ink text 11.7:1 -->
+    <color name="tape_family">#FF7B4FD6</color>     <!-- white 5.3:1, vs canvas 3.6:1 -->
+    <color name="tape_sos">#FFD8281C</color>        <!-- white 5.0:1 -->
+    <color name="on_tape">#FFFFFFFF</color>
+    <color name="on_tape_amber">#FF0E0F12</color>
+    <color name="tape_outline">#00000000</color>    <!-- light mode adds a 2dp ink edge -->
+    <color name="sos_outline">#FFFF5A4D</color>     <!-- 6.2:1 on canvas -->
+
+    <!-- ── Braille cell (state dots) ── -->
+    <color name="braille_on">#FFFFFFFF</color>
+    <color name="braille_off">#38FFFFFF</color>
+
+    <!-- ── Solid canvas (gradients banned) ── -->
+    <color name="gradient_warm_start">#FF0E0F12</color>
+    <color name="gradient_warm_end">#FF0E0F12</color>
+    <color name="gradient_nav_start">#FF0E0F12</color>
+    <color name="gradient_nav_end">#FF0E0F12</color>
 
     <!-- ── Overlays ── -->
-    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_dark">#99000000</color>
     <color name="overlay_light">#40FFFFFF</color>
-    <color name="camera_overlay">#CC000000</color>
+    <color name="camera_overlay">#E00E0F12</color>
 
-    <!-- ── AI accents ── -->
-    <color name="glow_coral">#407C9BFF</color>
-    <color name="glow_blue">#407C9BFF</color>
-    <color name="ai_active">#FF7C9BFF</color>
-    <color name="ai_listening">#FF4CAF50</color>
+    <!-- ── Voice / AI state ── -->
+    <color name="glow_coral">#409DB4FF</color>
+    <color name="glow_blue">#409DB4FF</color>
+    <color name="ai_active">#FF9DB4FF</color>
+    <color name="ai_listening">#FF5FD08A</color>
 
-    <!-- ── Card icon tints: monochrome, accent for navigation ── -->
-    <color name="icon_asl">#FFA3A3A3</color>
-    <color name="icon_color">#FFA3A3A3</color>
-    <color name="icon_nav">#FF7C9BFF</color>
-    <color name="icon_ocr">#FFA3A3A3</color>
+    <!-- ── Module icon tints (module hue, readable on canvas) ── -->
+    <color name="icon_asl">#FFA9AEB8</color>
+    <color name="icon_color">#FFF5C400</color>
+    <color name="icon_nav">#FF8FA6FF</color>
+    <color name="icon_ocr">#FF5FD08A</color>
+
+    <!-- ── Onboarding ── -->
+    <color name="onb_bg">#FF0E0F12</color>
+    <color name="onb_ink">#FFFFFFFF</color>
+    <color name="onb_muted">#FFA9AEB8</color>
+    <color name="onb_accent">#FFFFFFFF</color>
+    <color name="onb_accent_ripple">#33FFFFFF</color>
+
+    <!-- ── Vision-type option buttons (white text) ── -->
+    <color name="ob_opt_left">#FF2A52E8</color>
+    <color name="ob_opt_right">#FF0F7A43</color>
+    <color name="ob_opt_tunnel">#FF7B4FD6</color>
+    <color name="ob_opt_central">#FF0E7C86</color>
+    <color name="ob_opt_all">#FF3A3D44</color>
+    <color name="ob_neutral">#FF23252B</color>
 </resources>

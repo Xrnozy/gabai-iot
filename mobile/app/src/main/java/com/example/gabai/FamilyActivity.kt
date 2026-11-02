@@ -82,12 +82,20 @@ class FamilyActivity : BaseActivity() {
 
         val cg = Ui.card(c, "Caregiver dashboard").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
         cg.addView(Ui.caption(c, "For family and caregivers: live location, camera, alerts and device health."), Ui.lp(top = 4, ctx = c))
-        cg.addView(Ui.button(c, "Open caregiver dashboard", Ui.Kind.PRIMARY) {
+        val openDashboard = Ui.button(c, "Open caregiver dashboard", Ui.Kind.PRIMARY) {
             saveConnection()
             if (SettingsStore.getRelayToken(c, SettingsStore.ROLE_CAREGIVER).isBlank()) {
                 caregiverToken.error = "Enter the caregiver token first"; caregiverToken.requestFocus()
             } else startActivity(Intent(c, CaregiverActivity::class.java))
-        }, Ui.lp(top = 12, ctx = c))
+        }
+        // Debug builds only: hold the button to preview the dashboard layout with no token and no relay.
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            openDashboard.setOnLongClickListener {
+                startActivity(Intent(c, CaregiverActivity::class.java).putExtra(CaregiverActivity.EXTRA_DEBUG_PREVIEW, true))
+                true
+            }
+        }
+        cg.addView(openDashboard, Ui.lp(top = 12, ctx = c))
 
         // One role per phone: hide what belongs to the other one. Views stay built so renderStatus() never meets an uninitialised field.
         val caregiverPhone = SettingsStore.getAppRole(c) == SettingsStore.APP_CAREGIVER

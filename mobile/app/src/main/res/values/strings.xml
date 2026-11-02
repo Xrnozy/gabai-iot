@@ -7,6 +7,8 @@
     <string name="dashboard_subtitle">How can I help you today?</string>
     <string name="dashboard_ai_status">AI Assistant Active</string>
     <string name="dashboard_ai_listening">Listening…</string>
+    <string name="voice_state_off">Voice is off</string>
+    <string name="voice_state_loading">Getting voice ready…</string>
     <string name="voice_listening_desc">Voice commands listening</string>
     <string name="voice_awaiting_desc">Listening. Say a command</string>
     <string name="voice_loading_desc">Voice model loading</string>

@@ -1,83 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- ==================================================================
-         Design tokens — warm light system (inspo: warm-off-white smart
-         home UI). Cream canvas + white cards + terracotta accent +
-         warm-charcoal focal surfaces. Color NAMES stay stable so every
-         layout reference resolves; only values changed.
+         GabAi tokens, Label Tape world, LIGHT (system light setting).
+         Cool near-white ground, ink-black primary tape. Tape module hues
+         are identical to dark so colour keeps meaning across themes; amber
+         and others gain a 2dp ink edge (tape_outline) to separate from the
+         light ground. Same name set as values-night/colors.xml.
          ================================================================== -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- ── Surfaces (cream bg / white cards / warm elevated) ── -->
-    <color name="canvas">#FFF4F1EA</color>
-    <color name="canvas_secondary">#FFEDE9E1</color>
+    <!-- ── Surfaces ── -->
+    <color name="canvas">#FFF5F6F8</color>
+    <color name="canvas_secondary">#FFE9EBEF</color>
     <color name="surface_card">#FFFFFFFF</color>
-    <color name="surface_card_elevated">#FFFBFAF7</color>
-    <color name="surface_dark">#FF1F1D1B</color>
-    <color name="surface_dark_elevated">#FF2A2725</color>
-    <color name="surface_dark_card">#FF353230</color>
+    <color name="surface_card_elevated">#FFFFFFFF</color>
+    <color name="surface_dark">#FF0E0F12</color>
+    <color name="surface_dark_elevated">#FF1A1C21</color>
+    <color name="surface_dark_card">#FF23252B</color>
 
-    <!-- ── Hairlines & Dividers ── -->
-    <color name="hairline">#1A000000</color>
-    <color name="hairline_dark">#1AFFFFFF</color>
+    <!-- ── Seams ── -->
+    <color name="hairline">#FF7A7F8A</color>
+    <color name="hairline_dark">#FF646872</color>
 
-    <!-- ── Text (warm near-black / warm secondary) ── -->
-    <color name="ink">#FF1C1B1A</color>
-    <color name="body">#FF3D3B38</color>
-    <color name="muted">#FF6E6A64</color>
-    <color name="on_dark">#FFF2F3F5</color>
-    <color name="on_dark_soft">#FFB9BDC2</color>
-    <color name="on_dark_muted">#FF8E8A85</color>
+    <!-- ── Text ── -->
+    <color name="ink">#FF0E0F12</color>            <!-- 17.7:1 on canvas -->
+    <color name="body">#FF2A2D33</color>           <!-- 12.8:1 -->
+    <color name="muted">#FF4B505A</color>          <!--  7.5:1 -->
+    <color name="on_dark">#FFFFFFFF</color>
+    <color name="on_dark_soft">#FFE4E6EB</color>
+    <color name="on_dark_muted">#FFA9AEB8</color>
 
-    <!-- ── Primary Accent (terracotta — user/primary actions only) ── -->
-    <color name="primary">#FFB0522F</color>
-    <color name="primary_light">#FFC46A48</color>
-    <color name="primary_active">#FF8F4325</color>
-    <color name="primary_soft">#1AB0522F</color>
+    <!-- ── Primary = ink tape with white text ── -->
+    <color name="primary">#FF0E0F12</color>
+    <color name="primary_light">#FF2A2D33</color>
+    <color name="primary_active">#FF000000</color>
+    <color name="primary_soft">#140E0F12</color>
     <color name="on_primary">#FFFFFFFF</color>
-    <color name="focus_ring">#FFB0522F</color>
+    <color name="focus_ring">#FF1F3FB8</color>      <!-- 7.9:1 on canvas -->
 
-    <!-- ── Semantic (light-bg readable) ── -->
-    <color name="status_success">#FF3A7D44</color>
-    <color name="status_warning">#FFB26A00</color>
-    <color name="status_error">#FFD93025</color>
-    <color name="status_info">#FFB0522F</color>
+    <!-- ── Semantic ── -->
+    <color name="status_success">#FF13703A</color>  <!-- 5.7:1 -->
+    <color name="status_warning">#FF8A5300</color>  <!-- 5.9:1 -->
+    <color name="status_error">#FFB3261E</color>    <!-- 6.0:1 -->
+    <color name="status_info">#FF1F3FB8</color>
 
-    <!-- ── Former gradient endpoints: solid canvas (spec bans gradients) ── -->
-    <color name="gradient_warm_start">#FFF4F1EA</color>
-    <color name="gradient_warm_end">#FFF4F1EA</color>
-    <color name="gradient_nav_start">#FFF4F1EA</color>
-    <color name="gradient_nav_end">#FFF4F1EA</color>
+    <!-- ── Tape ── -->
+    <color name="tape_navigate">#FF2A52E8</color>
+    <color name="tape_read">#FF0F7A43</color>
+    <color name="tape_colour">#FFF5C400</color>
+    <color name="tape_family">#FF7B4FD6</color>
+    <color name="tape_sos">#FFD8281C</color>
+    <color name="on_tape">#FFFFFFFF</color>
+    <color name="on_tape_amber">#FF0E0F12</color>
+    <color name="tape_outline">#FF0E0F12</color>
+    <color name="sos_outline">#FFB3261E</color>     <!-- 6.0:1 on canvas -->
+
+    <!-- ── Braille cell ── -->
+    <color name="braille_on">#FF0E0F12</color>
+    <color name="braille_off">#337A7F8A</color>
+
+    <!-- ── Solid canvas ── -->
+    <color name="gradient_warm_start">#FFF5F6F8</color>
+    <color name="gradient_warm_end">#FFF5F6F8</color>
+    <color name="gradient_nav_start">#FFF5F6F8</color>
+    <color name="gradient_nav_end">#FFF5F6F8</color>
 
     <!-- ── Overlays ── -->
     <color name="overlay_dark">#80000000</color>
     <color name="overlay_light">#40FFFFFF</color>
-    <color name="camera_overlay">#CC1F1D1B</color>
+    <color name="camera_overlay">#E00E0F12</color>
 
-    <!-- ── Glow / AI accents ── -->
-    <color name="glow_coral">#40B0522F</color>
-    <color name="glow_blue">#40B0522F</color>
-    <color name="ai_active">#FFB0522F</color>
-    <color name="ai_listening">#FF3A7D44</color>
+    <!-- ── Voice / AI state ── -->
+    <color name="glow_coral">#401F3FB8</color>
+    <color name="glow_blue">#401F3FB8</color>
+    <color name="ai_active">#FF1F3FB8</color>
+    <color name="ai_listening">#FF13703A</color>
 
-    <!-- ── Card icon tints: monochrome, accent for navigation ── -->
-    <color name="icon_color">#FF6E6A64</color>
-    <color name="icon_nav">#FFB0522F</color>
-    <color name="icon_ocr">#FF6E6A64</color>
+    <!-- ── Module icon tints ── -->
+    <color name="icon_asl">#FF4B505A</color>
+    <color name="icon_color">#FF8A5300</color>
+    <color name="icon_nav">#FF2A52E8</color>
+    <color name="icon_ocr">#FF0F7A43</color>
 
-    <!-- ── Onboarding (warm light mode — terracotta accent) ── -->
-    <color name="onb_bg">#FFF4F1EA</color>
-    <color name="onb_ink">#FF1C1B1A</color>
-    <color name="onb_muted">#FF6E6A64</color>
-    <color name="onb_accent">#FFB0522F</color>
-    <color name="onb_accent_ripple">#33B0522F</color>
+    <!-- ── Onboarding ── -->
+    <color name="onb_bg">#FFF5F6F8</color>
+    <color name="onb_ink">#FF0E0F12</color>
+    <color name="onb_muted">#FF4B505A</color>
+    <color name="onb_accent">#FF0E0F12</color>
+    <color name="onb_accent_ripple">#330E0F12</color>
 
-    <!-- ── Vision-type option buttons: muted distinct hues, white text ── -->
-    <color name="ob_opt_left">#FFB0522F</color>
-    <color name="ob_opt_right">#FF4A6FA5</color>
-    <color name="ob_opt_tunnel">#FF5B7F62</color>
-    <color name="ob_opt_central">#FF7C5FA8</color>
-    <color name="ob_opt_all">#FF3F3D3A</color>
+    <!-- ── Vision-type option buttons (white text) ── -->
+    <color name="ob_opt_left">#FF2A52E8</color>
+    <color name="ob_opt_right">#FF0F7A43</color>
+    <color name="ob_opt_tunnel">#FF7B4FD6</color>
+    <color name="ob_opt_central">#FF0E7C86</color>
+    <color name="ob_opt_all">#FF3A3D44</color>
     <color name="ob_neutral">#FF23272C</color>
 </resources>

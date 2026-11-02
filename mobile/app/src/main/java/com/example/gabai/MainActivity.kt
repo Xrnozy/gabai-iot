@@ -22,6 +22,7 @@ import com.example.gabai.services.SettingsVoice
 import com.example.gabai.services.TtsService
 import com.example.gabai.services.VoiceCommandController
 import com.example.gabai.services.VoiceListenerService
+import com.example.gabai.ui.BrailleCell
 import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
@@ -33,7 +34,10 @@ class MainActivity : BaseActivity() {
     private lateinit var voice: VoiceCommandController
     private lateinit var micIndicator: ListeningIndicator
     private lateinit var heardPanel: HeardPanel
+    private lateinit var listeningCell: BrailleCell
     private var voiceAwaiting = false
+    private var isListening = false
+    private var isLoading = false
     private lateinit var btnAccess: TextView
 
     private val openingMode = AtomicReference<Mode?>(null)
@@ -162,18 +166,24 @@ class MainActivity : BaseActivity() {
             findViewById(R.id.mic_loading),
         )
         heardPanel = HeardPanel(findViewById(R.id.heard_panel))
+        listeningCell = findViewById(R.id.cell_listening)
+        renderVoiceState()
 
         voice = VoiceCommandController(this, tts, onCommand = ::handleCommand).apply {
             onListeningChanged = { listening ->
                 runOnUiThread {
                     micIndicator.setListening(listening)
                     heardPanel.setListening(listening)
+                    isListening = listening
+                    renderVoiceState()
                 }
             }
             onLoadingChanged = { loading ->
                 runOnUiThread {
                     micIndicator.setLoading(loading)
                     heardPanel.setLoading(loading)
+                    isLoading = loading
+                    renderVoiceState()
                 }
             }
             onAwaitingCommand = { awaiting ->
@@ -223,6 +233,18 @@ class MainActivity : BaseActivity() {
             voice.destroy()
             tts.shutdown()
         }
+    }
+
+    /** Panel text and braille cell both mirror the real mic state; loading wins over listening, as in ListeningIndicator. */
+    private fun renderVoiceState() {
+        findViewById<TextView>(R.id.tv_voice_state).setText(
+            when {
+                isLoading -> R.string.voice_state_loading
+                isListening -> R.string.dashboard_ai_listening
+                else -> R.string.voice_state_off
+            }
+        )
+        listeningCell.active = isListening && !isLoading
     }
 
     private fun refreshAccessLabel() {

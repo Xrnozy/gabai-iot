@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="BrailleCell">
+        <!-- Bit i set = braille dot i+1 raised (1,2,3 down the left column; 4,5,6 down the right). -->
+        <attr name="cellMask" format="integer" />
+        <attr name="dotColor" format="color|reference" />
+    </declare-styleable>
+</resources>

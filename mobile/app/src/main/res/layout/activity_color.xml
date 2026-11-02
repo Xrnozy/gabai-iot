@@ -49,7 +49,7 @@
                 android:text="@string/color_title"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_title"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/atkinson"
                 android:importantForAccessibility="yes" />
 
             <!-- Connecting indicator -->
@@ -83,7 +83,7 @@
                     android:text="@string/conn_connecting"
                     android:textColor="@color/primary"
                     android:textSize="@dimen/text_small"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
             </LinearLayout>
 
             <!-- Mic listening indicator -->
@@ -146,7 +146,7 @@
                     android:text="@string/color_detected_label"
                     android:textColor="@color/muted"
                     android:textSize="@dimen/text_small"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:letterSpacing="0.06" />
 
                 <TextView
@@ -157,7 +157,7 @@
                     android:text="@string/color_no_detection"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_headline"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:accessibilityLiveRegion="polite"
                     android:importantForAccessibility="yes"
                     android:lineSpacingMultiplier="1.2" />
@@ -182,7 +182,7 @@
             android:textAllCaps="false"
             android:textColor="@color/on_primary"
             android:textSize="@dimen/text_body"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:contentDescription="@string/color_announce_btn"
             android:importantForAccessibility="yes" />
 

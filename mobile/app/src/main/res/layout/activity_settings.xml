@@ -47,7 +47,7 @@
                 android:text="@string/settings_title"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_title"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/atkinson"
                 android:importantForAccessibility="yes" />
 
             <!-- Mic listening indicator (honest always-on mic state) -->
@@ -88,7 +88,7 @@
             android:text="@string/settings_section_audio"
             android:textColor="@color/primary"
             android:textSize="@dimen/text_small"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:letterSpacing="0.08"
             android:importantForAccessibility="yes" />
 
@@ -113,7 +113,7 @@
                 android:text="@string/settings_mic_source"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:id="@+id/tv_mic_source_value"
@@ -146,7 +146,7 @@
                 android:text="@string/settings_camera_source"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:id="@+id/tv_camera_source_value"
@@ -179,7 +179,7 @@
                 android:text="@string/settings_output_device"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:id="@+id/tv_output_value"
@@ -213,7 +213,7 @@
                     android:text="@string/settings_speech"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -247,7 +247,7 @@
                 android:text="@string/settings_speech_rate"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -269,7 +269,7 @@
                     app:autoSizeTextType="uniform"
                     app:autoSizeMinTextSize="10sp"
                     app:autoSizeMaxTextSize="18sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:importantForAccessibility="yes" />
 
                 <Button
@@ -286,7 +286,7 @@
                     app:autoSizeTextType="uniform"
                     app:autoSizeMinTextSize="10sp"
                     app:autoSizeMaxTextSize="18sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:importantForAccessibility="yes" />
 
                 <Button
@@ -302,7 +302,7 @@
                     app:autoSizeTextType="uniform"
                     app:autoSizeMinTextSize="10sp"
                     app:autoSizeMaxTextSize="18sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:importantForAccessibility="yes" />
             </LinearLayout>
         </LinearLayout>
@@ -316,7 +316,7 @@
             android:text="@string/settings_section_voice"
             android:textColor="@color/primary"
             android:textSize="@dimen/text_small"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:letterSpacing="0.08"
             android:importantForAccessibility="yes" />
 
@@ -342,7 +342,7 @@
                     android:text="@string/settings_voice_commands"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -383,7 +383,7 @@
                     android:text="@string/settings_wake_name"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -424,7 +424,7 @@
                     android:text="@string/settings_live_transcript"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -465,7 +465,7 @@
                     android:text="@string/settings_screen_off"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -493,7 +493,7 @@
             android:text="@string/settings_section_accessibility"
             android:textColor="@color/primary"
             android:textSize="@dimen/text_small"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:letterSpacing="0.08"
             android:importantForAccessibility="yes" />
 
@@ -519,7 +519,7 @@
                     android:text="@string/settings_touch_explore"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -560,7 +560,7 @@
                     android:text="@string/settings_high_contrast"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -605,7 +605,7 @@
                         android:text="@string/settings_font_size"
                         android:textColor="@color/ink"
                         android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
+                        android:fontFamily="@font/atkinson" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -623,7 +623,7 @@
                     android:text="100%"
                     android:textColor="@color/primary"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:importantForAccessibility="no" />
             </LinearLayout>
 
@@ -639,7 +639,7 @@
                     android:text="A"
                     android:textColor="@color/muted"
                     android:textSize="@dimen/text_caption"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:importantForAccessibility="no" />
 
                 <com.google.android.material.slider.Slider
@@ -661,7 +661,7 @@
                     android:text="A"
                     android:textColor="@color/muted"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:importantForAccessibility="no" />
             </LinearLayout>
         </LinearLayout>
@@ -688,7 +688,7 @@
                     android:text="@string/settings_haptics"
                     android:textColor="@color/ink"
                     android:textSize="@dimen/text_body_lg"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -716,7 +716,7 @@
             android:text="@string/settings_section_vision"
             android:textColor="@color/primary"
             android:textSize="@dimen/text_small"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:letterSpacing="0.08"
             android:importantForAccessibility="yes" />
 
@@ -741,7 +741,7 @@
                 android:text="@string/settings_vision_profile"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:id="@+id/tv_vision_profile_value"
@@ -762,7 +762,7 @@
             android:text="@string/settings_section_helper"
             android:textColor="@color/primary"
             android:textSize="@dimen/text_small"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:letterSpacing="0.08"
             android:importantForAccessibility="yes" />
 
@@ -787,7 +787,7 @@
                 android:text="@string/settings_server_url"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:id="@+id/tv_server_url_value"
@@ -820,7 +820,7 @@
                 android:text="@string/settings_replay_tutorial"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -840,7 +840,7 @@
             android:text="@string/settings_section_debug"
             android:textColor="@color/primary"
             android:textSize="@dimen/text_small"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="@font/atkinson"
             android:letterSpacing="0.08"
             android:importantForAccessibility="yes" />
 
@@ -865,7 +865,7 @@
                 android:text="@string/settings_debug_get_started"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -897,7 +897,7 @@
                 android:text="@string/settings_reset"
                 android:textColor="@color/status_error"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
 
             <TextView
                 android:layout_width="wrap_content"

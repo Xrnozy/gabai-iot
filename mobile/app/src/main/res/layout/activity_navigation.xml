@@ -50,7 +50,7 @@
                 android:text="@string/nav_title"
                 android:textColor="@color/on_dark"
                 android:textSize="@dimen/text_title"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/atkinson"
                 android:importantForAccessibility="yes" />
 
             <!-- Mic listening indicator (honest always-on mic state) -->
@@ -118,7 +118,7 @@
                     android:text="@string/conn_connecting"
                     android:textColor="@color/primary"
                     android:textSize="@dimen/text_small"
-                    android:fontFamily="sans-serif-medium" />
+                    android:fontFamily="@font/atkinson" />
             </LinearLayout>
 
             <View
@@ -141,7 +141,7 @@
                 android:importantForAccessibility="yes"
                 android:textColor="@color/on_dark"
                 android:textSize="@dimen/text_small"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/atkinson"
                 android:text="@string/nav_profile_default" />
         </LinearLayout>
 
@@ -172,7 +172,7 @@
                 android:text="@string/nav_obstacle_alert"
                 android:textColor="@color/status_error"
                 android:textSize="@dimen/text_body"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="@font/atkinson" />
         </LinearLayout>
     </LinearLayout>
 
@@ -201,7 +201,7 @@
             android:text="@string/nav_direction_ahead"
             android:textColor="@color/ai_active"
             android:textSize="@dimen/text_body_lg"
-            android:fontFamily="sans-serif-medium" />
+            android:fontFamily="@font/atkinson" />
     </LinearLayout>
 
     <!-- ════════ BOTTOM GUIDANCE SHEET ════════ -->
@@ -248,7 +248,7 @@
                     android:text="@string/nav_guidance_label"
                     android:textColor="@color/muted"
                     android:textSize="@dimen/text_small"
-                    android:fontFamily="sans-serif-medium"
+                    android:fontFamily="@font/atkinson"
                     android:letterSpacing="0.06" />
             </LinearLayout>
 
@@ -261,7 +261,7 @@
                 android:text="@string/nav_status_ready"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_headline"
-                android:fontFamily="sans-serif-medium"
+                android:fontFamily="@font/atkinson"
                 android:accessibilityLiveRegion="polite"
                 android:importantForAccessibility="yes"
                 android:lineSpacingMultiplier="1.3"

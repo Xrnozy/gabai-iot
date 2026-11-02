@@ -74,10 +74,9 @@ object VisionProfilePicker {
         }
         return android.widget.TextView(context).apply {
             text = label
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.on_tape))
             textSize = 18f
-            typeface = android.graphics.Typeface.create(
-                "sans-serif-medium", android.graphics.Typeface.BOLD)
+            typeface = com.example.gabai.ui.Ui.font(context, true)
             gravity = android.view.Gravity.CENTER
             isClickable = true
             isFocusable = true
@@ -86,7 +85,7 @@ object VisionProfilePicker {
             background = android.graphics.drawable.GradientDrawable().apply {
                 setColor(androidx.core.content.ContextCompat.getColor(context, colorRes))
                 cornerRadius =
-                    context.resources.getDimensionPixelSize(R.dimen.radius_pill).toFloat()
+                    context.resources.getDimensionPixelSize(R.dimen.radius_md).toFloat()
             }
             foreground =
                 androidx.core.content.ContextCompat.getDrawable(context, ripple.resourceId)

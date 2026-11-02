@@ -15,6 +15,7 @@ import com.example.gabai.ui.Ui
 class EmergencyActivity : BaseActivity() {
 
     private lateinit var headline: TextView
+    private lateinit var count: TextView
     private lateinit var detail: TextView
     private lateinit var cancel: TextView
     private lateinit var sendNow: TextView
@@ -28,10 +29,21 @@ class EmergencyActivity : BaseActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val c = this
-        headline = Ui.text(c, "", 40f, R.color.status_error, bold = true).apply { gravity = Gravity.CENTER }
+        headline = Ui.text(c, "", 32f, R.color.ink, bold = true).apply { gravity = Gravity.CENTER }
+        // The countdown number is the only large red element in the app. It is not a live region: TTS speaks at 10 s and 5 s.
+        count = Ui.text(c, "", 128f, R.color.status_error, bold = true).apply {
+            gravity = Gravity.CENTER
+            setLineSpacing(0f, 1f)
+            includeFontPadding = false
+        }
         detail = Ui.body(c, "").apply { gravity = Gravity.CENTER; textSize = 20f }
         cancel = Ui.button(c, "I'm okay — cancel", Ui.Kind.PRIMARY, "I'm okay. Cancel the alert. Button.") { Emergency.cancel(c) }
-        sendNow = Ui.button(c, "Send alert now", Ui.Kind.DANGER, "Send the alert now. Button.") { Emergency.sendNow(c) }
+        sendNow = Ui.button(c, "Send alert now", Ui.Kind.DANGER, "Send the alert now. Button.") { Emergency.sendNow(c) }.apply {
+            // Outline until focused, so the loud action is never the easy one to hit by accident.
+            setBackgroundResource(R.drawable.bg_sos_outline)
+            setTextColor(Ui.color(c, R.color.ink))
+            setOnFocusChangeListener { v, focused -> (v as TextView).setTextColor(Ui.color(c, if (focused) R.color.on_tape else R.color.ink)) }
+        }
         close = Ui.button(c, "Close", Ui.Kind.SECONDARY, "Close this screen. Button.") { Emergency.dismiss(); finish() }
         headline.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_ASSERTIVE
 
@@ -41,9 +53,10 @@ class EmergencyActivity : BaseActivity() {
             setBackgroundColor(Ui.color(c, R.color.canvas))
             setPadding(Ui.dp(c, 24), Ui.dp(c, 24), Ui.dp(c, 24), Ui.dp(c, 24))
             addView(headline, Ui.lp(ctx = c))
-            addView(detail, Ui.lp(top = 16, ctx = c))
+            addView(count, Ui.lp(top = 8, ctx = c))
+            addView(detail, Ui.lp(top = 8, ctx = c))
             addView(cancel, Ui.lp(h = Ui.dp(c, 120), top = 32, ctx = c))
-            addView(sendNow, Ui.lp(top = 16, ctx = c))
+            addView(sendNow, Ui.lp(top = 34, ctx = c))
             addView(close, Ui.lp(top = 16, ctx = c))
         }
         setContentView(col)
@@ -56,14 +69,15 @@ class EmergencyActivity : BaseActivity() {
         when (Emergency.phase) {
             Emergency.Phase.COUNTDOWN -> {
                 val what = if (Emergency.kind == "fall") "Possible fall" else "Emergency"
-                headline.text = "$what\n${Emergency.secondsLeft()}"
-                headline.setTextColor(Ui.color(this, R.color.status_error))
+                headline.text = what
+                count.text = "${Emergency.secondsLeft()}"
+                count.visibility = View.VISIBLE
                 detail.text = "Your caregivers will be alerted when the countdown ends."
                 cancel.visibility = View.VISIBLE; sendNow.visibility = View.VISIBLE; close.visibility = View.GONE
             }
             Emergency.Phase.SENT -> {
                 headline.text = "Alert sent"
-                headline.setTextColor(Ui.color(this, R.color.status_success))
+                count.visibility = View.GONE
                 val by = Emergency.ackedBy
                 detail.text = if (by != null) "$by has seen your alert." else "Waiting for a caregiver to respond."
                 cancel.text = "I'm okay — cancel the alert"

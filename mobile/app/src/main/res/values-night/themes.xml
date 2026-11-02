@@ -1,10 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Keep night mode visually identical to warm cream palette -->
-    <style name="Base.Theme.GabAi" parent="Theme.Material3.Light.NoActionBar">
+    <!-- Dark Label Tape: near-black canvas, white primary tape -->
+    <style name="Base.Theme.GabAi" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_light</item>
-        <item name="colorOnPrimaryContainer">@color/ink</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary</item>
+        <item name="colorError">@color/status_error</item>
+        <item name="colorOutline">@color/hairline</item>
 
         <item name="android:colorBackground">@color/canvas</item>
         <item name="android:windowBackground">@color/canvas</item>

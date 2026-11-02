@@ -1,13 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.GabAi" parent="Theme.Material3.Light.NoActionBar">
-        <!-- ── Primary: Muted Coral ── -->
+        <!-- ── Primary: ink tape (Label Tape world) ── -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_light</item>
-        <item name="colorOnPrimaryContainer">@color/ink</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary</item>
+        <item name="colorError">@color/status_error</item>
+        <item name="colorOutline">@color/hairline</item>
 
-        <!-- ── Background: Warm Cream ── -->
+        <!-- ── Background: cool near-white ── -->
         <item name="android:colorBackground">@color/canvas</item>
         <item name="android:windowBackground">@color/canvas</item>
         <item name="colorOnBackground">@color/ink</item>
@@ -18,7 +20,7 @@
         <item name="colorSurfaceVariant">@color/surface_card</item>
         <item name="colorOnSurfaceVariant">@color/body</item>
 
-        <!-- ── Status bar: warm cream to match canvas ── -->
+        <!-- ── Status bar: matches canvas ── -->
         <item name="android:statusBarColor">@color/canvas</item>
         <item name="android:navigationBarColor">@color/canvas</item>
         <item name="android:windowLightStatusBar">true</item>
@@ -27,18 +29,79 @@
 
     <style name="Theme.GabAi" parent="Base.Theme.GabAi" />
 
+    <!-- ── Label Tape components ── -->
+    <style name="GabAi.Tape" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">@dimen/tape_gap</item>
+        <item name="android:minHeight">@dimen/tape_min_height</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">@dimen/space_xl</item>
+        <item name="android:paddingEnd">@dimen/space_xl</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:importantForAccessibility">yes</item>
+    </style>
+
+    <style name="GabAi.Tape.Labels" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="GabAi.Tape.Title" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/atkinson</item>
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/on_tape</item>
+    </style>
+
+    <style name="GabAi.Tape.Desc" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:fontFamily">@font/atkinson</item>
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">@color/on_tape</item>
+    </style>
+
+    <style name="GabAi.Tape.Cell" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">@dimen/space_lg</item>
+    </style>
+
+    <style name="GabAi.Panel" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">@dimen/tape_gap</item>
+        <item name="android:minHeight">@dimen/touch_large</item>
+        <item name="android:background">@drawable/bg_panel_focusable</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:padding">@dimen/space_lg</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:importantForAccessibility">yes</item>
+    </style>
+
     <!-- ── Text Appearances ── -->
     <style name="GabAi.Text" parent="">
         <item name="android:textSize">@dimen/text_body</item>
         <item name="android:textColor">@color/body</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.4</item>
     </style>
 
     <style name="GabAi.Text.Display">
         <item name="android:textSize">@dimen/text_display</item>
         <item name="android:textColor">@color/ink</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:textStyle">normal</item>
         <item name="android:lineSpacingMultiplier">1.2</item>
     </style>
@@ -46,49 +109,49 @@
     <style name="GabAi.Text.Headline">
         <item name="android:textSize">@dimen/text_headline</item>
         <item name="android:textColor">@color/ink</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.2</item>
     </style>
 
     <style name="GabAi.Text.Title">
         <item name="android:textSize">@dimen/text_title</item>
         <item name="android:textColor">@color/ink</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.15</item>
     </style>
 
     <style name="GabAi.Text.Body">
         <item name="android:textSize">@dimen/text_body</item>
         <item name="android:textColor">@color/body</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.4</item>
     </style>
 
     <style name="GabAi.Text.BodyLarge">
         <item name="android:textSize">@dimen/text_body_lg</item>
         <item name="android:textColor">@color/body</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.4</item>
     </style>
 
     <style name="GabAi.Text.Caption">
         <item name="android:textSize">@dimen/text_caption</item>
         <item name="android:textColor">@color/muted</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.3</item>
     </style>
 
     <style name="GabAi.Text.OnDark">
         <item name="android:textSize">@dimen/text_body_lg</item>
         <item name="android:textColor">@color/on_dark</item>
-        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.4</item>
     </style>
 
     <style name="GabAi.Text.OnDark.Headline">
         <item name="android:textSize">@dimen/text_headline</item>
         <item name="android:textColor">@color/on_dark</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/atkinson</item>
         <item name="android:lineSpacingMultiplier">1.2</item>
     </style>
 </resources>

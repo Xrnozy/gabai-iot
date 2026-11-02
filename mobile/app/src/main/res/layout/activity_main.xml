@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Home, Label Tape: one embossed tape strip per module, a quiet voice panel, SOS alone at the end behind a gap. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/canvas"
+    android:orientation="vertical"
     tools:context=".MainActivity">
 
 <ScrollView
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
     android:background="@color/canvas"
     android:fillViewport="true"
     android:overScrollMode="never">
@@ -17,105 +21,85 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="140dp">
+        android:paddingStart="@dimen/page_margin"
+        android:paddingEnd="@dimen/page_margin"
+        android:paddingTop="@dimen/page_margin_top"
+        android:paddingBottom="@dimen/space_2xl">
 
-        <!-- ════════ HEADER SECTION ════════ -->
+        <!-- Header: greeting + the cell that mirrors the mic -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_gradient_warm"
-            android:orientation="vertical"
-            android:paddingStart="@dimen/page_margin"
-            android:paddingEnd="@dimen/page_margin"
-            android:paddingTop="@dimen/space_lg"
-            android:paddingBottom="@dimen/space_2xl">
+            android:gravity="top"
+            android:orientation="horizontal">
 
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <!-- AI Status Pill -->
-            <TextView
-                android:id="@+id/tv_ai_status"
+                <TextView
+                    android:id="@+id/tv_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/atkinson"
+                    android:importantForAccessibility="yes"
+                    android:lineSpacingMultiplier="1.1"
+                    android:text="@string/dashboard_greeting"
+                    android:textColor="@color/ink"
+                    android:textSize="@dimen/text_display"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:fontFamily="@font/atkinson"
+                    android:importantForAccessibility="yes"
+                    android:lineSpacingMultiplier="1.3"
+                    android:text="@string/dashboard_subtitle"
+                    android:textColor="@color/muted"
+                    android:textSize="@dimen/text_body" />
+            </LinearLayout>
+
+            <com.example.gabai.ui.BrailleCell
+                android:id="@+id/cell_listening"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_status_pill"
-                android:drawableStart="@drawable/ic_ai_sparkle"
-                android:drawablePadding="@dimen/space_sm"
-                android:gravity="center_vertical"
-                android:text="@string/dashboard_ai_status"
-                android:textColor="@color/primary"
-                android:textSize="@dimen/text_caption"
-                android:fontFamily="sans-serif-medium"
-                android:importantForAccessibility="yes"
-                android:contentDescription="@string/dashboard_ai_status" />
-
-            <!-- Greeting -->
-            <TextView
-                android:id="@+id/tv_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_lg"
-                android:fontFamily="sans-serif-medium"
-                android:importantForAccessibility="yes"
-                android:text="@string/dashboard_greeting"
-                android:textColor="@color/ink"
-                android:textSize="@dimen/text_display"
-                android:lineSpacingMultiplier="1.15" />
-
-            <!-- Subtitle -->
-            <TextView
-                android:id="@+id/tv_hint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_lg"
                 android:layout_marginTop="@dimen/space_sm"
-                android:fontFamily="sans-serif"
-                android:importantForAccessibility="yes"
-                android:text="@string/dashboard_subtitle"
-                android:textColor="@color/muted"
-                android:textSize="@dimen/text_body"
-                android:lineSpacingMultiplier="1.4" />
+                app:cellMask="27"
+                app:dotColor="@color/braille_on" />
         </LinearLayout>
 
+        <!-- Voice panel -->
         <LinearLayout
             android:id="@+id/card_voice_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/page_margin"
-            android:layout_marginEnd="@dimen/page_margin"
-            android:layout_marginTop="@dimen/space_xl"
-            android:background="@drawable/bg_card_cream"
-            android:elevation="@dimen/elevation_card"
+            android:layout_marginTop="@dimen/space_2xl"
+            android:background="@drawable/bg_panel_focusable"
             android:orientation="vertical"
-            android:padding="@dimen/space_xl">
+            android:padding="@dimen/space_lg">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-                <ImageView
-                    android:layout_width="@dimen/icon_lg"
-                    android:layout_height="@dimen/icon_lg"
-                    android:src="@drawable/ic_ai_wave"
-                    android:importantForAccessibility="no" />
-
-
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tv_voice_state"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="@dimen/space_lg"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/dashboard_ai_listening"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-
-                </LinearLayout>
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFamily="@font/atkinson"
+                    android:text="@string/voice_state_off"
+                    android:textColor="@color/ink"
+                    android:textSize="@dimen/text_body_lg" />
 
                 <!-- Mic listening indicator (honest always-on mic state;
                      pulses while "Gab" is awaiting a command) -->
@@ -135,401 +119,154 @@
                         android:id="@+id/mic_indicator"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
+                        android:contentDescription="@string/voice_listening_desc"
+                        android:importantForAccessibility="yes"
                         android:padding="@dimen/space_lg"
                         android:src="@drawable/ic_mic"
                         android:visibility="gone"
-                        android:contentDescription="@string/voice_listening_desc"
-                        android:importantForAccessibility="yes"
                         app:tint="@color/ai_listening" />
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- "You said" live transcript, merged into the listening card -->
+            <!-- "You said" live transcript -->
             <LinearLayout
                 android:id="@+id/heard_panel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_lg"
-                android:orientation="vertical"
+                android:layout_marginTop="@dimen/space_md"
                 android:importantForAccessibility="no"
+                android:orientation="vertical"
                 android:visibility="gone">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/atkinson"
                     android:text="@string/heard_label"
                     android:textColor="@color/ai_listening"
                     android:textSize="@dimen/text_small"
-                    android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.08" />
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tv_heard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_sm"
+                    android:layout_marginTop="@dimen/space_xs"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/atkinson"
+                    android:lineSpacingMultiplier="1.3"
+                    android:maxLines="3"
                     android:text="@string/heard_idle"
                     android:textColor="@color/ink"
-                    android:textSize="@dimen/text_body"
-                    android:fontFamily="sans-serif"
-                    android:maxLines="3"
-                    android:ellipsize="end"
-                    android:lineSpacingMultiplier="1.4" />
+                    android:textSize="@dimen/text_body" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ════════ FEATURE CARDS GRID (2×2) ════════ -->
+        <!-- ════════ MODULE TAPE STRIPS ════════ -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_xl"
-            android:orientation="vertical"
-            android:paddingStart="@dimen/page_margin"
-            android:paddingEnd="@dimen/page_margin"
-            android:paddingBottom="20dp">
+            android:id="@+id/btn_navigation"
+            style="@style/GabAi.Tape"
+            android:layout_marginTop="@dimen/space_2xl"
+            android:background="@drawable/bg_tape_navigate"
+            android:contentDescription="@string/card_nav_title">
 
-            <!-- Row 1: Navigation + Read Text -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="20dp"
-                android:paddingBottom="1dp"
-                android:paddingLeft="1dp">
-
-                <!-- Navigation Card (primary) -->
-                <LinearLayout
-                    android:id="@+id/btn_navigation"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="@dimen/space_sm"
-                    android:background="@drawable/bg_card_cream"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="@dimen/elevation_card"
-                    android:minHeight="@dimen/card_min_height"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_xl"
-                    android:contentDescription="@string/card_nav_title"
-                    android:importantForAccessibility="yes">
-
-                    <FrameLayout
-                        android:layout_width="@dimen/card_icon_size"
-                        android:layout_height="@dimen/card_icon_size"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="@dimen/icon_md"
-                            android:layout_height="@dimen/icon_md"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_navigation"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_md"
-                        android:text="@string/card_nav_title"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:text="@string/card_nav_desc"
-                        android:textColor="@color/muted"
-                        android:textSize="@dimen/text_caption" />
-                </LinearLayout>
-
-                <!-- Read Text Card -->
-                <LinearLayout
-                    android:id="@+id/btn_ocr"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginStart="@dimen/space_sm"
-                    android:background="@drawable/bg_card_cream"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="@dimen/elevation_card"
-                    android:minHeight="@dimen/card_min_height"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_xl"
-                    android:layout_marginBottom="2dp"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:contentDescription="@string/card_ocr_title"
-                    android:importantForAccessibility="yes">
-
-                    <FrameLayout
-                        android:layout_width="@dimen/card_icon_size"
-                        android:layout_height="@dimen/card_icon_size"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="@dimen/icon_md"
-                            android:layout_height="@dimen/icon_md"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_ocr"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_md"
-                        android:text="@string/card_ocr_title"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:text="@string/card_ocr_desc"
-                        android:textColor="@color/muted"
-                        android:textSize="@dimen/text_caption" />
-                </LinearLayout>
+            <LinearLayout style="@style/GabAi.Tape.Labels">
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_nav_title" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_nav_desc" />
             </LinearLayout>
+            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="29" app:dotColor="@color/on_tape" />
+        </LinearLayout>
 
-            <!-- Row 2: Color + Settings -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
+        <LinearLayout
+            android:id="@+id/btn_ocr"
+            style="@style/GabAi.Tape"
+            android:background="@drawable/bg_tape_read"
+            android:contentDescription="@string/card_ocr_title">
 
-                <!-- Color Card -->
-                <LinearLayout
-                    android:id="@+id/btn_color"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="@dimen/space_sm"
-                    android:background="@drawable/bg_card_cream"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="@dimen/elevation_card"
-                    android:minHeight="@dimen/card_min_height"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_xl"
-                    android:layout_marginBottom="2dp"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginStart="2dp"
-                    android:contentDescription="@string/card_color_title"
-                    android:importantForAccessibility="yes">
-
-                    <FrameLayout
-                        android:layout_width="@dimen/card_icon_size"
-                        android:layout_height="@dimen/card_icon_size"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="@dimen/icon_md"
-                            android:layout_height="@dimen/icon_md"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_color"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_md"
-                        android:text="@string/card_color_title"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:text="@string/card_color_desc"
-                        android:textColor="@color/muted"
-                        android:textSize="@dimen/text_caption" />
-                </LinearLayout>
-
-                <!-- Settings Card -->
-                <LinearLayout
-                    android:id="@+id/btn_settings"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginStart="@dimen/space_sm"
-                    android:background="@drawable/bg_card_cream"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="@dimen/elevation_card"
-                    android:minHeight="@dimen/card_min_height"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_xl"
-                    android:layout_marginBottom="2dp"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:contentDescription="@string/card_settings_title"
-                    android:importantForAccessibility="yes">
-
-                    <FrameLayout
-                        android:layout_width="@dimen/card_icon_size"
-                        android:layout_height="@dimen/card_icon_size"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="@dimen/icon_md"
-                            android:layout_height="@dimen/icon_md"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_settings"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_md"
-                        android:text="@string/card_settings_title"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:text="@string/card_settings_desc"
-                        android:textColor="@color/muted"
-                        android:textSize="@dimen/text_caption" />
-                </LinearLayout>
+            <LinearLayout style="@style/GabAi.Tape.Labels">
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_ocr_title" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_ocr_desc" />
             </LinearLayout>
+            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="23" app:dotColor="@color/on_tape" />
+        </LinearLayout>
 
-            <!-- Row 3: Family + SOS -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal">
+        <LinearLayout
+            android:id="@+id/btn_color"
+            style="@style/GabAi.Tape"
+            android:background="@drawable/bg_tape_colour"
+            android:contentDescription="@string/card_color_title">
 
-                <LinearLayout
-                    android:id="@+id/btn_family"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="@dimen/space_sm"
-                    android:background="@drawable/bg_card_cream"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="@dimen/elevation_card"
-                    android:minHeight="@dimen/card_min_height"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_xl"
-                    android:contentDescription="Family and safety. Share your location, or open the caregiver view."
-                    android:importantForAccessibility="yes">
-
-                    <FrameLayout
-                        android:layout_width="@dimen/card_icon_size"
-                        android:layout_height="@dimen/card_icon_size"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="@dimen/icon_md"
-                            android:layout_height="@dimen/icon_md"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_family"
-                            app:tint="@color/primary"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_md"
-                        android:text="@string/card_family_title"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:text="@string/card_family_desc"
-                        android:textColor="@color/muted"
-                        android:textSize="@dimen/text_caption" />
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/btn_sos"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginStart="@dimen/space_sm"
-                    android:background="@drawable/bg_card_cream"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="@dimen/elevation_card"
-                    android:minHeight="@dimen/card_min_height"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_xl"
-                    android:contentDescription="Emergency SOS. Alerts your caregivers after a short countdown you can cancel."
-                    android:importantForAccessibility="yes">
-
-                    <FrameLayout
-                        android:layout_width="@dimen/card_icon_size"
-                        android:layout_height="@dimen/card_icon_size"
-                        android:background="@drawable/bg_icon_circle">
-
-                        <ImageView
-                            android:layout_width="@dimen/icon_md"
-                            android:layout_height="@dimen/icon_md"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_sos"
-                            app:tint="@color/status_error"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_md"
-                        android:text="@string/card_sos_title"
-                        android:textColor="@color/ink"
-                        android:textSize="@dimen/text_body_lg"
-                        android:fontFamily="sans-serif-medium" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_xs"
-                        android:text="@string/card_sos_desc"
-                        android:textColor="@color/muted"
-                        android:textSize="@dimen/text_caption" />
-                </LinearLayout>
+            <LinearLayout style="@style/GabAi.Tape.Labels">
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_color_title" android:textColor="@color/on_tape_amber" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_color_desc" android:textColor="@color/on_tape_amber" />
             </LinearLayout>
+            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="9" app:dotColor="@color/on_tape_amber" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btn_family"
+            style="@style/GabAi.Tape"
+            android:background="@drawable/bg_tape_family"
+            android:contentDescription="Family and safety. Share your location, or open the caregiver view.">
+
+            <LinearLayout style="@style/GabAi.Tape.Labels">
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_family_title" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_family_desc" />
+            </LinearLayout>
+            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="11" app:dotColor="@color/on_tape" />
+        </LinearLayout>
+
+        <!-- Settings and accessible navigation: quiet panels, not tape -->
+        <LinearLayout
+            android:id="@+id/btn_settings"
+            style="@style/GabAi.Panel"
+            android:contentDescription="@string/card_settings_title">
 
             <TextView
-                android:id="@+id/btn_access_nav"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:background="@drawable/bg_btn_secondary_focusable"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:minHeight="@dimen/touch_large"
-                android:padding="@dimen/space_lg"
-                android:text="Accessible navigation: Off"
+                android:layout_weight="1"
+                android:fontFamily="@font/atkinson"
+                android:text="@string/card_settings_title"
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
-                android:fontFamily="sans-serif-medium" />
+                android:textStyle="bold" />
+            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="14" app:dotColor="@color/ink" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_access_nav"
+            style="@style/GabAi.Panel"
+            android:fontFamily="@font/atkinson"
+            android:text="Accessible navigation: Off"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body_lg" />
+
+        <!-- ════════ SOS: alone, behind a gap, outline until focused ════════ -->
+        <LinearLayout
+            android:id="@+id/btn_sos"
+            style="@style/GabAi.Tape"
+            android:layout_marginTop="@dimen/sos_gap"
+            android:background="@drawable/bg_sos_outline"
+            android:contentDescription="Emergency SOS. Alerts your caregivers after a short countdown you can cancel.">
+
+            <LinearLayout style="@style/GabAi.Tape.Labels">
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_sos_title" android:textColor="@color/ink" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_sos_desc" android:textColor="@color/muted" />
+            </LinearLayout>
+            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="63" app:dotColor="@color/sos_outline" />
         </LinearLayout>
 
     </LinearLayout>
 
 </ScrollView>
 
-<include layout="@layout/view_mic_fab" />
-
+<!-- Mic lives in its own bar so it never covers a strip while scrolling -->
+<FrameLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="@dimen/space_md">
+    <include layout="@layout/view_mic_fab" />
 </FrameLayout>
+
+</LinearLayout>

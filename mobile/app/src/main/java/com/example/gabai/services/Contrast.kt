@@ -1,39 +1,31 @@
 package com.example.gabai.services
 
-import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import com.example.gabai.R
 
 /**
- * Runtime high-contrast pass (design.md §7.2 "high-contrast variant"): every
- * secondary/muted text token is pushed to pure white and surfaces go to pure
- * black so text/surface pairs land well above the 7:1 target. Accent and
- * semantic colors (danger/warn/ok) are left untouched.
+ * Runtime high-contrast pass: secondary text tokens (muted, body and their onboarding/on-dark twins) are pushed to the
+ * full-strength ink token of the current theme, so text lands at the top of the contrast range in both dark (white)
+ * and light (black) schemes. Tape, accent and semantic colours are left untouched.
  */
 object Contrast {
 
-    /** Current secondary-text tokens that get flattened to white. */
-    private val SECONDARY_TEXT = intArrayOf(
-        0xFF9BA0A6.toInt(), // muted
-        0xFFD0D3D8.toInt(), // body
-        0xFF6E7278.toInt(), // on_dark_muted
-        0xFFB9BDC2.toInt(), // on_dark_soft
-        0xFF7B828B.toInt(), // icon greys used on text
+    private val SECONDARY_TOKENS = intArrayOf(
+        R.color.muted, R.color.body, R.color.onb_muted, R.color.on_dark_muted, R.color.on_dark_soft,
     )
 
     fun apply(root: View) {
-        walk(root)
+        val c = root.context
+        walk(root, SECONDARY_TOKENS.map { ContextCompat.getColor(c, it) }.toSet(), ContextCompat.getColor(c, R.color.ink))
     }
 
-    private fun walk(v: View) {
-        if (v is TextView) {
-            if (v.currentTextColor in SECONDARY_TEXT) {
-                v.setTextColor(Color.WHITE)
-            }
-        }
+    private fun walk(v: View, secondary: Set<Int>, ink: Int) {
+        if (v is TextView && v.currentTextColor in secondary) v.setTextColor(ink)
         if (v is ViewGroup) {
-            for (i in 0 until v.childCount) walk(v.getChildAt(i))
+            for (i in 0 until v.childCount) walk(v.getChildAt(i), secondary, ink)
         }
     }
 }

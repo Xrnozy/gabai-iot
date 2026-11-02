@@ -33,6 +33,7 @@ class CaregiverActivity : BaseActivity() {
     private lateinit var alertsBtn: TextView
     private lateinit var accessBtn: TextView
     private lateinit var tabsBtn: TextView
+    private lateinit var optionsColumn: LinearLayout
     private var current = 0
     private val onHub: () -> Unit = { render() }
 
@@ -42,27 +43,30 @@ class CaregiverActivity : BaseActivity() {
         val ack: (String) -> Unit = { id -> acknowledge(id) }
         tabs = listOf(OverviewTab(c, ::select2, ack), MapTab(c), CameraTab(c), SafetyTab(c, ack), DeviceTab(c))
 
+        // Options (background alerts, people, accessibility) live in a sheet, so live data starts at the top of the screen.
+        alertsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { toggleAlerts() }
+        accessBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { setAccessNav(!isAccessNavOn()); window.decorView.postDelayed({ refreshAccessButtons() }, 250) }
+        tabsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) {
+            setAccessNav(true, tabsOnly = !SettingsStore.isAccessTabsOnly(c))
+            window.decorView.postDelayed({ refreshAccessButtons() }, 250)
+        }
+        optionsColumn = Ui.column(c, 16).apply {
+            addView(alertsBtn, Ui.lp(ctx = c))
+            addView(Ui.button(c, "People I look after", Ui.Kind.SECONDARY, "People I look after. Invite someone or see who has allowed you. Button.") {
+                startActivity(android.content.Intent(c, FamilyActivity::class.java))
+            }, Ui.lp(top = 12, ctx = c))
+            addView(accessBtn, Ui.lp(top = 12, ctx = c))
+            addView(tabsBtn, Ui.lp(top = 12, ctx = c))
+        }
         val header = Ui.column(c, 16).apply {
             setBackgroundColor(Ui.color(c, R.color.canvas))
             addView(Ui.row(c).apply {
                 addView(Ui.title(c, "Caregiver"), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 linkChip = Ui.chip(c, Level.OFF, "Connecting")
                 addView(linkChip)
+                addView(Ui.button(c, "Options", Ui.Kind.SECONDARY, "Options. Background alerts, people I look after, accessible navigation. Button.") { showOptions() },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.marginStart = Ui.dp(c, 12) })
             })
-            alertsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { toggleAlerts() }
-            addView(alertsBtn, Ui.lp(top = 8, ctx = c))
-            addView(Ui.button(c, "People I look after", Ui.Kind.SECONDARY, "People I look after. Invite someone or see who has allowed you. Button.") {
-                startActivity(android.content.Intent(c, FamilyActivity::class.java))
-            }, Ui.lp(top = 8, ctx = c))
-            accessBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { setAccessNav(!isAccessNavOn()); window.decorView.postDelayed({ refreshAccessButtons() }, 250) }
-            tabsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) {
-                setAccessNav(true, tabsOnly = !SettingsStore.isAccessTabsOnly(c))
-                window.decorView.postDelayed({ refreshAccessButtons() }, 250)
-            }
-            addView(Ui.row(c).apply {
-                addView(accessBtn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-                addView(tabsBtn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = Ui.dp(c, 8) })
-            }, Ui.lp(top = 8, ctx = c))
         }
         content = FrameLayout(c)
         tabs.forEach { content.addView(it.view, FrameLayout.LayoutParams(-1, -1)) }
@@ -70,7 +74,6 @@ class CaregiverActivity : BaseActivity() {
         val bar = LinearLayout(c).apply {
             orientation = LinearLayout.HORIZONTAL
             setBackgroundColor(Ui.color(c, R.color.surface_card))
-            elevation = Ui.dp(c, 8).toFloat()
             setPadding(Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4))
         }
         tabViews = tabs.mapIndexed { i, t -> tabView(t, i).also { bar.addView(it, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)) } }
@@ -84,6 +87,17 @@ class CaregiverActivity : BaseActivity() {
         })
         select(0)
         refreshAlertsButton()
+    }
+
+    private fun showOptions() {
+        refreshAlertsButton(); refreshAccessButtons()
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Options")
+            .setView(optionsColumn)
+            .setNegativeButton("Close", null)
+            .create()
+            .also { d -> d.setOnDismissListener { (optionsColumn.parent as? android.view.ViewGroup)?.removeView(optionsColumn) } }
+            .show()
     }
 
     private fun select2(id: String) { tabs.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.let(::select) }
@@ -160,10 +174,15 @@ class CaregiverActivity : BaseActivity() {
 
     private var promptedForLink = false
 
+    companion object {
+        /** Debug builds: open the dashboard without a token or an active link, only to look at the layout. */
+        const val EXTRA_DEBUG_PREVIEW = "debug_preview"
+    }
+
     private fun render() {
         val link = StateHub.link
         // Nobody has allowed this caregiver yet (or the token is not set up): go straight to the invite screen, once.
-        if (!promptedForLink && link.error?.let { it.contains("no active caregiver link", true) || it.startsWith("No relay token") } == true) {
+        if (!promptedForLink && !intent.getBooleanExtra(EXTRA_DEBUG_PREVIEW, false) && link.error?.let { it.contains("no active caregiver link", true) || it.startsWith("No relay token") } == true) {
             promptedForLink = true
             startActivity(android.content.Intent(this, FamilyActivity::class.java))
         }

@@ -118,15 +118,16 @@ private fun page(ctx: Context) = Ui.column(ctx, 16)
 
 private fun LinearLayout.card(card: LiveCard, top: Int = 12) = addView(card.view, Ui.lp(top = top, ctx = context))
 
-private fun banner(ctx: Context, level: Level, text: String, tv: TextView) {
+/** Status banner. An emergency is solid red tape with on-tape text; other levels are tinted panels with a 2dp edge. */
+private fun banner(ctx: Context, level: Level, text: String, tv: TextView, solid: Boolean = false) {
     val c = Ui.color(ctx, level.color)
     tv.text = "${level.symbol}  $text"
-    tv.setTextColor(c)
     tv.background = GradientDrawable().apply {
-        setColor(Color.argb(28, Color.red(c), Color.green(c), Color.blue(c)))
-        setStroke(Ui.dp(ctx, 2), c)
-        cornerRadius = Ui.dp(ctx, 16).toFloat()
+        if (solid) setColor(Ui.color(ctx, R.color.tape_sos))
+        else { setColor(Color.argb(28, Color.red(c), Color.green(c), Color.blue(c))); setStroke(Ui.dp(ctx, 2), c) }
+        cornerRadius = Ui.dp(ctx, 6).toFloat()
     }
+    tv.setTextColor(if (solid) Ui.color(ctx, R.color.on_tape) else c)
 }
 
 class OverviewTab(private val ctx: Context, private val open: (String) -> Unit, private val ack: (String) -> Unit) : CaregiverTab {
@@ -166,7 +167,7 @@ class OverviewTab(private val ctx: Context, private val open: (String) -> Unit, 
             s == null -> banner(ctx, if (link.error != null) Level.BAD else Level.OFF,
                 link.error?.let { "Cannot reach the server. $it" } ?: "Waiting for the first update…", status)
             active != null -> banner(ctx, Level.BAD, (if (active.str("kind") == "sos") "EMERGENCY SOS" else "POSSIBLE FALL") +
-                " · ${active.str("status")} · ${Fmt.clock(active.num("t"))}", status)
+                " · ${active.str("status")} · ${Fmt.clock(active.num("t"))}", status, solid = true)
             !link.ok -> banner(ctx, Level.WARN, "This app lost the server. Showing last known information from ${Fmt.clock(link.lastSuccessMs / 1000.0)}.", status)
             phone != "online" -> banner(ctx, Level.WARN, "Phone is offline. Showing last known information.", status)
             pi != "online" -> banner(ctx, Level.WARN, "Raspberry Pi is offline. The phone may be using the ARCore fallback.", status)
