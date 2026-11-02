@@ -60,6 +60,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".RoleActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".OnboardingActivity"
             android:exported="false" />
 

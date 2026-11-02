@@ -13,6 +13,7 @@ import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import com.example.gabai.BaseActivity
+import com.example.gabai.FamilyActivity
 import com.example.gabai.R
 import com.example.gabai.safety.RelayApi
 import com.example.gabai.services.SettingsStore
@@ -50,6 +51,9 @@ class CaregiverActivity : BaseActivity() {
             })
             alertsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { toggleAlerts() }
             addView(alertsBtn, Ui.lp(top = 8, ctx = c))
+            addView(Ui.button(c, "People I look after", Ui.Kind.SECONDARY, "People I look after. Invite someone or see who has allowed you. Button.") {
+                startActivity(android.content.Intent(c, FamilyActivity::class.java))
+            }, Ui.lp(top = 8, ctx = c))
             accessBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { setAccessNav(!isAccessNavOn()); window.decorView.postDelayed({ refreshAccessButtons() }, 250) }
             tabsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) {
                 setAccessNav(true, tabsOnly = !SettingsStore.isAccessTabsOnly(c))
@@ -154,8 +158,15 @@ class CaregiverActivity : BaseActivity() {
         super.onStop()
     }
 
+    private var promptedForLink = false
+
     private fun render() {
         val link = StateHub.link
+        // Nobody has allowed this caregiver yet (or the token is not set up): go straight to the invite screen, once.
+        if (!promptedForLink && link.error?.let { it.contains("no active caregiver link", true) || it.startsWith("No relay token") } == true) {
+            promptedForLink = true
+            startActivity(android.content.Intent(this, FamilyActivity::class.java))
+        }
         val l = if (link.ok) Level.OK else if (StateHub.snapshot == null && link.error == null) Level.OFF else Level.BAD
         linkChip.text = "${l.symbol} " + if (link.ok) "Live · ${link.rttMs} ms" else if (StateHub.snapshot != null) "Offline · showing last known" else "Connecting"
         linkChip.setTextColor(Ui.color(this, l.color))

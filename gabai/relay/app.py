@@ -13,6 +13,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from .core import LinkError
+
 MAX_BODY = 1_000_000
 BOUNDARY = "gabaiframe"
 
@@ -44,15 +46,43 @@ def create_app(relay, frames, tokens):
                 return role
         return None
 
-    def bearer(authorization: str = Header(default=""), token: str = Query(default="")):
-        return role_for(authorization[7:] if authorization.startswith("Bearer ") else token)
+    def actor(authorization: str = Header(default=""), token: str = Query(default="")):
+        """Who is calling: a legacy shared token (role only) or a registered person (their own token)."""
+        raw = authorization[7:] if authorization.startswith("Bearer ") else token
+        role = role_for(raw)
+        if role:
+            return {"role": role, "person": None}
+        person = relay.person_for_token(raw)
+        if person:
+            return {"role": "phone" if person["role"] == "user" else "caregiver", "person": person}
+        return {"role": None, "person": None}
 
-    def need(*roles):
-        def dep(role=Depends(bearer)):
-            if role not in roles:
-                raise HTTPException(401 if role is None else 403, "invalid token" if role is None else "role not allowed")
-            return role
+    def need(*roles, linked=True):
+        """A person-token caregiver reads data only through an accepted link; shared tokens keep their old reach."""
+        def dep(who=Depends(actor)):
+            if who["role"] not in roles:
+                raise HTTPException(401 if who["role"] is None else 403, "invalid token" if who["role"] is None else "role not allowed")
+            p = who["person"]
+            if linked and p and p["role"] == "caregiver" and not relay.has_access(p["id"]):
+                raise HTTPException(403, "no active caregiver link")
+            return who
         return dep
+
+    def need_person(role):
+        def dep(who=Depends(actor)):
+            p = who["person"]
+            if p is None:
+                raise HTTPException(401, "a registered person token is required")
+            if role and p["role"] != role:
+                raise HTTPException(403, "role not allowed")
+            return p
+        return dep
+
+    def link_call(fn, *args):
+        try:
+            return fn(*args)
+        except LinkError as e:
+            raise HTTPException(e.code, str(e))
 
     async def body(request: Request):
         raw = await request.body()
@@ -93,8 +123,30 @@ def create_app(relay, frames, tokens):
     def events(since: float = 0.0, limit: int = 100):
         return {"events": relay.events(limit, since), "connections": relay.conn_log()}
 
-    @app.post("/api/events/{event_id}/ack", dependencies=[Depends(need("caregiver"))])
-    def ack(event_id: str, who: str = Query(default="caregiver", max_length=40)):
+    @app.post("/api/register")
+    async def register(data=Depends(body)):
+        return link_call(relay.register, data.get("role"), data.get("name"), data.get("handle"))
+
+    @app.get("/api/links")
+    def links(p=Depends(need_person(None))):
+        return {"person": p, "links": relay.links_for(p)}
+
+    @app.post("/api/links/invite")
+    async def invite(data=Depends(body), p=Depends(need_person("caregiver"))):
+        return link_call(relay.invite, p["id"], data.get("handle"))
+
+    @app.post("/api/links/{link_id}/respond")
+    async def respond(link_id: str, data=Depends(body), p=Depends(need_person("user"))):
+        return link_call(relay.respond, p["id"], link_id, data.get("action"))
+
+    @app.post("/api/links/{link_id}/revoke")
+    def revoke(link_id: str, p=Depends(need_person(None))):
+        return link_call(relay.revoke, p["id"], link_id)
+
+    @app.post("/api/events/{event_id}/ack")
+    def ack(event_id: str, who: str = Query(default="caregiver", max_length=40), a=Depends(need("caregiver"))):
+        if a["person"]:
+            who = a["person"]["name"]                           # a registered caregiver cannot sign an ack as someone else
         if not relay.acknowledge(event_id, who):
             raise HTTPException(409, "event not found or already handled")
         return {"ok": True}

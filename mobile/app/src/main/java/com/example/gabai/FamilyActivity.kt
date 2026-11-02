@@ -31,6 +31,8 @@ class FamilyActivity : BaseActivity() {
     private lateinit var phoneToken: EditText
     private lateinit var caregiverToken: EditText
     private lateinit var name: EditText
+    private lateinit var userLinks: FamilyLinks
+    private lateinit var caregiverLinks: FamilyLinks
     private val onChange: () -> Unit = { runOnUiThread { renderStatus() } }
 
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
@@ -70,6 +72,14 @@ class FamilyActivity : BaseActivity() {
         listOf(url, phoneToken, caregiverToken, name).forEach { conn.addView(it, Ui.lp(top = 12, ctx = c)) }
         conn.addView(Ui.button(c, "Save connection", Ui.Kind.SECONDARY) { saveConnection() }, Ui.lp(top = 16, ctx = c))
 
+        val mine = Ui.card(c, "My caregivers").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
+        userLinks = FamilyLinks(c, "user") { phoneToken.setText(it) }
+        mine.addView(userLinks.view, Ui.lp(ctx = c))
+
+        val cared = Ui.card(c, "People I look after").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
+        caregiverLinks = FamilyLinks(c, "caregiver") { caregiverToken.setText(it) }
+        cared.addView(caregiverLinks.view, Ui.lp(ctx = c))
+
         val cg = Ui.card(c, "Caregiver dashboard").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
         cg.addView(Ui.caption(c, "For family and caregivers: live location, camera, alerts and device health."), Ui.lp(top = 4, ctx = c))
         cg.addView(Ui.button(c, "Open caregiver dashboard", Ui.Kind.PRIMARY) {
@@ -79,11 +89,22 @@ class FamilyActivity : BaseActivity() {
             } else startActivity(Intent(c, CaregiverActivity::class.java))
         }, Ui.lp(top = 12, ctx = c))
 
+        // One role per phone: hide what belongs to the other one. Views stay built so renderStatus() never meets an uninitialised field.
+        val caregiverPhone = SettingsStore.getAppRole(c) == SettingsStore.APP_CAREGIVER
+        (if (caregiverPhone) listOf(share, mine) else listOf(cared, cg)).forEach { it.visibility = View.GONE }
+        col.addView(Ui.button(c, "Switch role", Ui.Kind.SECONDARY, "Switch role between navigation help and caregiver. Button.") {
+            SettingsStore.setAppRole(c, "")
+            startActivity(Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        }, Ui.lp(top = 16, ctx = c))
+
         col.addView(Ui.space(c, 48))
         setContentView(ScrollView(c).apply { setBackgroundColor(Ui.color(c, R.color.canvas)); addView(col); isFillViewport = true })
     }
 
-    override fun onStart() { super.onStart(); LiveState.listen(onChange); renderStatus() }
+    override fun onStart() {
+        super.onStart(); LiveState.listen(onChange); renderStatus()
+        if (SettingsStore.getAppRole(this) == SettingsStore.APP_CAREGIVER) caregiverLinks.refresh() else userLinks.refresh()
+    }
     override fun onStop() { LiveState.unlisten(onChange); super.onStop() }
 
     private fun saveConnection() {

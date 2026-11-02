@@ -11,6 +11,7 @@ object SettingsStore {
 
     private const val PREFS = "gabai_settings"
 
+    private const val KEY_APP_ROLE = "app_role"
     private const val KEY_ONBOARDING_DONE = "onboarding_done"
     private const val KEY_VOICE_COMMANDS = "voice_commands_enabled"
     private const val KEY_WAKE_REQUIRED = "wake_name_required"
@@ -42,6 +43,8 @@ object SettingsStore {
     const val DEFAULT_RELAY_URL = "http://100.66.233.67:8090"
     const val ROLE_PHONE = "phone"
     const val ROLE_CAREGIVER = "caregiver"
+    const val APP_USER = "user"
+    const val APP_CAREGIVER = "caregiver"
 
     /** Mic input selection: "auto" (system routing), "phone" (built-in
      *  mic), "headset" (wired/BT headset mic). Speech output is separate —
@@ -60,6 +63,10 @@ object SettingsStore {
     const val SPEECH_RATE_SLOW = 0.8f
     const val SPEECH_RATE_NORMAL = 1.0f
     const val SPEECH_RATE_FAST = 1.3f
+
+    /** Who uses this phone: [APP_USER] (needs navigation help) or [APP_CAREGIVER]. Empty until the first-launch choice is made. */
+    fun getAppRole(c: Context): String = prefs(c).getString(KEY_APP_ROLE, "") ?: ""
+    fun setAppRole(c: Context, role: String) = put(c) { putString(KEY_APP_ROLE, role) }
 
     fun isOnboardingDone(c: Context) = prefs(c).getBoolean(KEY_ONBOARDING_DONE, false)
     fun setOnboardingDone(c: Context, done: Boolean) =

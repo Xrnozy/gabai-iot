@@ -35,16 +35,24 @@ class RelayApi(context: Context, private val role: String) {
         .put("name", name).put("points", JSONArray().also { a -> points.forEach { a.put(JSONArray().put(it.first).put(it.second)) } }))
     fun clearRoute() = call("DELETE", "/api/route")
 
-    private fun call(method: String, path: String, body: JSONObject? = null): Reply {
+    /** Caregiver links. [register] needs no token: it creates the person this phone then signs in as. */
+    fun register(personRole: String, name: String, handle: String?) = call("POST", "/api/register",
+        JSONObject().put("role", personRole).put("name", name).apply { if (!handle.isNullOrBlank()) put("handle", handle) }, auth = false)
+    fun links() = call("GET", "/api/links")
+    fun invite(handle: String) = call("POST", "/api/links/invite", JSONObject().put("handle", handle))
+    fun respond(linkId: String, action: String) = call("POST", "/api/links/${java.net.URLEncoder.encode(linkId, "UTF-8")}/respond", JSONObject().put("action", action))
+    fun revoke(linkId: String) = call("POST", "/api/links/${java.net.URLEncoder.encode(linkId, "UTF-8")}/revoke")
+
+    private fun call(method: String, path: String, body: JSONObject? = null, auth: Boolean = true): Reply {
         val t0 = SystemClock.elapsedRealtime()
         var conn: HttpURLConnection? = null
         return try {
-            if (token().isBlank()) return Reply(0, null, 0, "No relay token set. Add it in Settings.")
+            if (auth && token().isBlank()) return Reply(0, null, 0, "No relay token set. Add it in Settings.")
             conn = (URL(base() + path).openConnection() as HttpURLConnection).apply {
                 requestMethod = method
                 connectTimeout = 4_000
                 readTimeout = 6_000
-                setRequestProperty("Authorization", "Bearer ${token()}")
+                if (auth) setRequestProperty("Authorization", "Bearer ${token()}")
                 if (body != null) {
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json")
@@ -55,7 +63,8 @@ class RelayApi(context: Context, private val role: String) {
             val text = (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { String(it.readBytes()) } ?: ""
             val json = runCatching { JSONObject(text) }.getOrNull()
             Reply(code, json, SystemClock.elapsedRealtime() - t0,
-                if (code in 200..299) null else if (code == 401 || code == 403) "Relay rejected the token." else "Relay error $code.")
+                if (code in 200..299) null else if (code == 401) "Relay rejected the token."
+                else json?.optString("detail")?.takeIf { it.isNotBlank() } ?: if (code == 403) "Relay rejected the token." else "Relay error $code.")
         } catch (e: Exception) {
             Reply(0, null, SystemClock.elapsedRealtime() - t0, "Cannot reach the relay: ${e.javaClass.simpleName}")
         } finally {

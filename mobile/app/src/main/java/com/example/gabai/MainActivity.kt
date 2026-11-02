@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import com.example.gabai.caregiver.CaregiverActivity
 import com.example.gabai.safety.Emergency
 import com.example.gabai.services.Command
 import com.example.gabai.services.CommandParser
@@ -57,6 +58,15 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // First launch asks who uses this phone; caregivers never see the navigation home screen.
+        val appRole = SettingsStore.getAppRole(this)
+        if (appRole.isEmpty() || appRole == SettingsStore.APP_CAREGIVER) {
+            routingToOnboarding = true
+            startActivity(Intent(this, if (appRole.isEmpty()) RoleActivity::class.java else CaregiverActivity::class.java))
+            finish()
+            return
+        }
 
         // First run: route through onboarding (blindness type + tutorial).
         if (!SettingsStore.isOnboardingDone(this)) {

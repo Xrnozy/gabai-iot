@@ -3,8 +3,10 @@
 Everything a caregiver sees carries its age. Nothing is called "live" because it once was: connection state is derived from
 when the server last HEARD from a device, never from the last status the device reported about itself.
 """
+import hashlib
 import json
 import os
+import secrets
 import sqlite3
 import threading
 import time
@@ -29,7 +31,22 @@ CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY, kind TEXT, status TEXT, t
   ack_by TEXT, ack_t REAL, updated REAL);
 CREATE TABLE IF NOT EXISTS conn_events(n INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, state TEXT, reason TEXT, t REAL);
 CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS people(id TEXT PRIMARY KEY, role TEXT, name TEXT, handle TEXT UNIQUE, token_hash TEXT UNIQUE, created REAL);
+CREATE TABLE IF NOT EXISTS links(id TEXT PRIMARY KEY, user_id TEXT, caregiver_id TEXT, status TEXT, created REAL, responded REAL,
+  UNIQUE(user_id, caregiver_id));
+CREATE TABLE IF NOT EXISTS invite_log(caregiver_id TEXT, t REAL);
 """
+INVITE_TTL_S = 7 * 24 * 3600  # a pending invite nobody answered stops being answerable
+INVITES_PER_HOUR = 10
+REGISTRATIONS_PER_HOUR = 30
+PERSON_ROLES = ("user", "caregiver")
+
+
+class LinkError(Exception):
+    """A link action the caller may not take; `code` is the HTTP status the API maps it to."""
+    def __init__(self, msg, code=400):
+        super().__init__(msg)
+        self.code = code
 
 
 def _num(v):
@@ -231,6 +248,114 @@ class Relay:
                 self._pi_last = {"health": h, "hello": self._pi["hello"], "recv": now}
                 self._put("pi_last", self._pi_last)
                 self._db.commit()
+
+    # ---------- people and caregiver links ----------
+    # The data store above holds one user's data, so a link only gates who may READ it. Nothing here grants access by itself:
+    # an invite is inert until the user accepts, and revoking takes effect on the caregiver's next request.
+    @staticmethod
+    def _hash(token):
+        return hashlib.sha256(token.encode()).hexdigest()
+
+    @staticmethod
+    def _norm_handle(handle):
+        h = str(handle or "").strip().lower()
+        return h if 3 <= len(h) <= 40 and all(c.isalnum() or c in "._-@+" for c in h) else None
+
+    def register(self, role, name, handle=None):
+        """Create a person and return their token once; only its hash is stored."""
+        if role not in PERSON_ROLES:
+            raise LinkError("role must be 'user' or 'caregiver'")
+        name = str(name or "").strip()[:60]
+        if not name:
+            raise LinkError("name is required")
+        h = self._norm_handle(handle) if handle else None
+        if handle and h is None:
+            raise LinkError("handle must be 3-40 letters, digits or . _ - @ +")
+        if role == "user" and h is None:
+            raise LinkError("a user needs a handle so caregivers can invite them")
+        now = self.now()
+        with self._lock:
+            recent = self._db.execute("SELECT COUNT(*) c FROM people WHERE created>?", (now - 3600,)).fetchone()["c"]
+            if recent >= REGISTRATIONS_PER_HOUR:
+                raise LinkError("too many registrations, try later", 429)
+            if h and self._db.execute("SELECT 1 FROM people WHERE handle=?", (h,)).fetchone():
+                raise LinkError("handle already taken", 409)
+            pid, token = secrets.token_hex(8), secrets.token_urlsafe(24)
+            self._db.execute("INSERT INTO people VALUES(?,?,?,?,?,?)", (pid, role, name, h, self._hash(token), now))
+            self._db.commit()
+        return {"person_id": pid, "token": token, "role": role, "name": name, "handle": h}
+
+    def person_for_token(self, token):
+        if not token:
+            return None
+        with self._lock:
+            r = self._db.execute("SELECT id,role,name,handle FROM people WHERE token_hash=?", (self._hash(token),)).fetchone()
+        return dict(r) if r else None
+
+    def has_access(self, caregiver_id):
+        with self._lock:
+            self._expire(self.now())
+            return self._db.execute("SELECT 1 FROM links WHERE caregiver_id=? AND status='active'", (caregiver_id,)).fetchone() is not None
+
+    def _expire(self, now):
+        self._db.execute("UPDATE links SET status='expired' WHERE status='pending' AND created<?", (now - INVITE_TTL_S,))
+
+    def invite(self, caregiver_id, handle):
+        """Always succeeds the same way, so the answer never reveals whether a handle exists, is blocked, or already linked."""
+        now = self.now()
+        h = self._norm_handle(handle)
+        with self._lock:
+            self._expire(now)
+            sent = self._db.execute("SELECT COUNT(*) c FROM invite_log WHERE caregiver_id=? AND t>?", (caregiver_id, now - 3600)).fetchone()["c"]
+            if sent >= INVITES_PER_HOUR:
+                raise LinkError("too many invites, try later", 429)
+            self._db.execute("INSERT INTO invite_log VALUES(?,?)", (caregiver_id, now))
+            user = self._db.execute("SELECT id FROM people WHERE handle=? AND role='user'", (h,)).fetchone() if h else None
+            if user and user["id"] != caregiver_id:
+                row = self._db.execute("SELECT id,status FROM links WHERE user_id=? AND caregiver_id=?", (user["id"], caregiver_id)).fetchone()
+                if row is None:
+                    self._db.execute("INSERT INTO links VALUES(?,?,?,?,?,NULL)", (secrets.token_hex(8), user["id"], caregiver_id, "pending", now))
+                elif row["status"] in ("declined", "revoked", "expired"):      # a fresh ask; 'blocked' and 'active' stay as they are
+                    self._db.execute("UPDATE links SET status='pending', created=?, responded=NULL WHERE id=?", (now, row["id"]))
+            self._db.commit()
+        return {"ok": True}
+
+    def respond(self, user_id, link_id, action):
+        status = {"accept": "active", "decline": "declined", "block": "blocked"}.get(action)
+        if status is None:
+            raise LinkError("action must be accept, decline or block")
+        now = self.now()
+        with self._lock:
+            self._expire(now)
+            cur = self._db.execute("UPDATE links SET status=?, responded=? WHERE id=? AND user_id=? AND status='pending'",
+                                   (status, now, link_id, user_id))
+            self._db.commit()
+            if cur.rowcount != 1:
+                raise LinkError("no pending invite with that id", 404)
+        return {"ok": True, "status": status}
+
+    def revoke(self, person_id, link_id):
+        """Either side can end a link; a pending one counts as the caregiver withdrawing or the user ignoring it."""
+        with self._lock:
+            cur = self._db.execute("UPDATE links SET status='revoked', responded=? WHERE id=? AND (user_id=? OR caregiver_id=?) "
+                                   "AND status IN ('pending','active')", (self.now(), link_id, person_id, person_id))
+            self._db.commit()
+            if cur.rowcount != 1:
+                raise LinkError("no active or pending link with that id", 404)
+        return {"ok": True}
+
+    def links_for(self, person):
+        now = self.now()
+        mine, other = ("user_id", "caregiver_id") if person["role"] == "user" else ("caregiver_id", "user_id")
+        with self._lock:
+            self._expire(now)
+            rows = self._db.execute(f"SELECT l.id,l.status,l.created,l.responded,p.name,p.handle FROM links l JOIN people p ON p.id=l.{other} "
+                                    f"WHERE l.{mine}=? ORDER BY l.created DESC", (person["id"],)).fetchall()
+        if person["role"] == "caregiver":
+            # Only accepted links: any other row would show a stranger's name for a guessed handle, and would reveal blocks and declines.
+            return [{k: d[k] for k in ("id", "status", "created", "responded", "name")} for d in map(dict, rows) if d["status"] == "active"]
+        return [{k: d[k] for k in ("id", "status", "created", "responded", "name")} for d in map(dict, rows)
+                if d["status"] in ("pending", "active")]
 
     # ---------- connections ----------
     def _touch(self, device, now, reason):

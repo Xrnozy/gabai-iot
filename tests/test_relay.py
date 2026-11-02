@@ -283,3 +283,63 @@ def test_phone_can_tell_a_lost_pi_from_a_pi_that_never_connected(env):
     relay.tick()
     r = c.post("/api/phone/ingest", json={}, headers=PH).json()
     assert r["pi_connected"] is False and r["pi_ever_online"] is True
+
+
+def _bearer(person):
+    return {"Authorization": f"Bearer {person['token']}"}
+
+
+def _pair(c, handle="maria"):
+    user = c.post("/api/register", json={"role": "user", "name": "Maria", "handle": handle}).json()
+    cg = c.post("/api/register", json={"role": "caregiver", "name": "Ana"}).json()
+    c.post("/api/links/invite", json={"handle": handle}, headers=_bearer(cg))
+    link = c.get("/api/links", headers=_bearer(user)).json()["links"][0]
+    return user, cg, link
+
+
+def test_invite_gives_no_access_until_user_accepts(env):
+    _, _, _, c = env
+    user, cg, link = _pair(c)
+    assert link["status"] == "pending"
+    assert c.get("/api/state", headers=_bearer(cg)).status_code == 403
+    assert c.post(f"/api/links/{link['id']}/respond", json={"action": "accept"}, headers=_bearer(cg)).status_code == 403
+    assert c.post(f"/api/links/{link['id']}/respond", json={"action": "accept"}, headers=_bearer(user)).status_code == 200
+    assert c.get("/api/state", headers=_bearer(cg)).status_code == 200
+
+
+def test_revoke_stops_access_and_second_caregiver_is_independent(env):
+    _, _, _, c = env
+    user, cg, link = _pair(c)
+    c.post(f"/api/links/{link['id']}/respond", json={"action": "accept"}, headers=_bearer(user))
+    other = c.post("/api/register", json={"role": "caregiver", "name": "Ben"}).json()
+    assert c.get("/api/state", headers=_bearer(other)).status_code == 403
+    assert c.post(f"/api/links/{link['id']}/revoke", headers=_bearer(user)).status_code == 200
+    assert c.get("/api/state", headers=_bearer(cg)).status_code == 403
+
+
+def test_invite_answer_does_not_reveal_unknown_handle_and_is_rate_limited(env):
+    _, _, _, c = env
+    user, cg, _ = _pair(c)
+    known = c.post("/api/links/invite", json={"handle": "maria"}, headers=_bearer(cg))
+    unknown = c.post("/api/links/invite", json={"handle": "nobody"}, headers=_bearer(cg))
+    assert known.status_code == unknown.status_code == 200 and known.json() == unknown.json()
+    codes = [c.post("/api/links/invite", json={"handle": "nobody"}, headers=_bearer(cg)).status_code for _ in range(12)]
+    assert 429 in codes
+
+
+def test_block_is_invisible_to_caregiver_and_pending_invite_expires(env):
+    clock, _, _, c = env
+    user, cg, link = _pair(c)
+    c.post(f"/api/links/{link['id']}/respond", json={"action": "block"}, headers=_bearer(user))
+    c.post("/api/links/invite", json={"handle": "maria"}, headers=_bearer(cg))            # re-invite after a block does nothing
+    assert c.get("/api/links", headers=_bearer(cg)).json()["links"] == []              # no name, no sign of the block
+    assert c.get("/api/state", headers=_bearer(cg)).status_code == 403
+    user2, cg2, link2 = _pair(c, "joao")
+    clock.t += 8 * 24 * 3600
+    assert c.post(f"/api/links/{link2['id']}/respond", json={"action": "accept"}, headers=_bearer(user2)).status_code == 404
+
+
+def test_legacy_shared_tokens_still_work(env):
+    _, _, _, c = env
+    assert c.get("/api/state", headers=CG).status_code == 200
+    assert c.post("/api/phone/ingest", json={}, headers=PH).status_code == 200
