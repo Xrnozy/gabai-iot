@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================================================================
+         Design tokens — warm light system (inspo: warm-off-white smart
+         home UI). Cream canvas + white cards + terracotta accent +
+         warm-charcoal focal surfaces. Color NAMES stay stable so every
+         layout reference resolves; only values changed.
+         ================================================================== -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- ── Surfaces (cream bg / white cards / warm elevated) ── -->
+    <color name="canvas">#FFF4F1EA</color>
+    <color name="canvas_secondary">#FFEDE9E1</color>
+    <color name="surface_card">#FFFFFFFF</color>
+    <color name="surface_card_elevated">#FFFBFAF7</color>
+    <color name="surface_dark">#FF1F1D1B</color>
+    <color name="surface_dark_elevated">#FF2A2725</color>
+    <color name="surface_dark_card">#FF353230</color>
+
+    <!-- ── Hairlines & Dividers ── -->
+    <color name="hairline">#1A000000</color>
+    <color name="hairline_dark">#1AFFFFFF</color>
+
+    <!-- ── Text (warm near-black / warm secondary) ── -->
+    <color name="ink">#FF1C1B1A</color>
+    <color name="body">#FF3D3B38</color>
+    <color name="muted">#FF6E6A64</color>
+    <color name="on_dark">#FFF2F3F5</color>
+    <color name="on_dark_soft">#FFB9BDC2</color>
+    <color name="on_dark_muted">#FF8E8A85</color>
+
+    <!-- ── Primary Accent (terracotta — user/primary actions only) ── -->
+    <color name="primary">#FFB0522F</color>
+    <color name="primary_light">#FFC46A48</color>
+    <color name="primary_active">#FF8F4325</color>
+    <color name="primary_soft">#1AB0522F</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="focus_ring">#FFB0522F</color>
+
+    <!-- ── Semantic (light-bg readable) ── -->
+    <color name="status_success">#FF3A7D44</color>
+    <color name="status_warning">#FFB26A00</color>
+    <color name="status_error">#FFD93025</color>
+    <color name="status_info">#FFB0522F</color>
+
+    <!-- ── Former gradient endpoints: solid canvas (spec bans gradients) ── -->
+    <color name="gradient_warm_start">#FFF4F1EA</color>
+    <color name="gradient_warm_end">#FFF4F1EA</color>
+    <color name="gradient_nav_start">#FFF4F1EA</color>
+    <color name="gradient_nav_end">#FFF4F1EA</color>
+
+    <!-- ── Overlays ── -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#40FFFFFF</color>
+    <color name="camera_overlay">#CC1F1D1B</color>
+
+    <!-- ── Glow / AI accents ── -->
+    <color name="glow_coral">#40B0522F</color>
+    <color name="glow_blue">#40B0522F</color>
+    <color name="ai_active">#FFB0522F</color>
+    <color name="ai_listening">#FF3A7D44</color>
+
+    <!-- ── Card icon tints: monochrome, accent for navigation ── -->
+    <color name="icon_color">#FF6E6A64</color>
+    <color name="icon_nav">#FFB0522F</color>
+    <color name="icon_ocr">#FF6E6A64</color>
+
+    <!-- ── Onboarding (warm light mode — terracotta accent) ── -->
+    <color name="onb_bg">#FFF4F1EA</color>
+    <color name="onb_ink">#FF1C1B1A</color>
+    <color name="onb_muted">#FF6E6A64</color>
+    <color name="onb_accent">#FFB0522F</color>
+    <color name="onb_accent_ripple">#33B0522F</color>
+
+    <!-- ── Vision-type option buttons: muted distinct hues, white text ── -->
+    <color name="ob_opt_left">#FFB0522F</color>
+    <color name="ob_opt_right">#FF4A6FA5</color>
+    <color name="ob_opt_tunnel">#FF5B7F62</color>
+    <color name="ob_opt_central">#FF7C5FA8</color>
+    <color name="ob_opt_all">#FF3F3D3A</color>
+    <color name="ob_neutral">#FF23272C</color>
+</resources>

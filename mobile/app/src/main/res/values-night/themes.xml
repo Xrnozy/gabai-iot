@@ -1,0 +1,24 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Keep night mode visually identical to warm cream palette -->
+    <style name="Base.Theme.GabAi" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_light</item>
+        <item name="colorOnPrimaryContainer">@color/ink</item>
+
+        <item name="android:colorBackground">@color/canvas</item>
+        <item name="android:windowBackground">@color/canvas</item>
+        <item name="colorOnBackground">@color/ink</item>
+        <item name="colorSurface">@color/canvas</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorSurfaceVariant">@color/surface_card</item>
+        <item name="colorOnSurfaceVariant">@color/body</item>
+
+        <item name="android:statusBarColor">@color/canvas</item>
+        <item name="android:navigationBarColor">@color/canvas</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+
+    <style name="Theme.GabAi" parent="Base.Theme.GabAi" />
+</resources>

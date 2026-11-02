@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_nav_dark_surface">
+
+    <!-- ════════ FULL-SCREEN NAVIGATION MAP AREA ════════ -->
+    <View
+        android:id="@+id/nav_map_area"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/surface_dark" />
+
+    <!-- ════════ TOP CHROME ════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="@dimen/space_lg"
+        android:paddingStart="@dimen/page_margin"
+        android:paddingEnd="@dimen/page_margin">
+
+        <!-- Row 1: back + title + mic -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/btn_nav_back"
+                android:layout_width="@dimen/touch_comfortable"
+                android:layout_height="@dimen/touch_comfortable"
+                android:padding="@dimen/space_lg"
+                android:src="@drawable/ic_back_arrow"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/btn_back_desc"
+                android:importantForAccessibility="yes"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="@color/on_dark" />
+
+            <TextView
+                android:id="@+id/tv_nav_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/space_sm"
+                android:text="@string/nav_title"
+                android:textColor="@color/on_dark"
+                android:textSize="@dimen/text_title"
+                android:fontFamily="sans-serif-medium"
+                android:importantForAccessibility="yes" />
+
+            <!-- Mic listening indicator (honest always-on mic state) -->
+            <FrameLayout
+                android:layout_width="@dimen/touch_comfortable"
+                android:layout_height="@dimen/touch_comfortable">
+
+                <ProgressBar
+                    android:id="@+id/mic_loading"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/mic_indicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="@dimen/space_lg"
+                    android:src="@drawable/ic_mic"
+                    android:visibility="gone"
+                    android:contentDescription="@string/voice_listening_desc"
+                    android:importantForAccessibility="yes"
+                    app:tint="@color/ai_listening" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Row 2: status chips -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="@dimen/space_sm">
+
+            <!-- Connecting indicator -->
+            <LinearLayout
+                android:id="@+id/conn_pill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_pill"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:importantForAccessibility="yes"
+                android:contentDescription="Connecting">
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/conn_progress"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:indeterminate="true"
+                    app:indicatorColor="@color/primary"
+                    app:trackThickness="2dp" />
+
+                <TextView
+                    android:id="@+id/conn_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/conn_connecting"
+                    android:textColor="@color/primary"
+                    android:textSize="@dimen/text_small"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Vision-profile chip: tap to pick blind-spot zones -->
+            <TextView
+                android:id="@+id/btn_nav_profile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_pill"
+                android:gravity="center"
+                android:minHeight="@dimen/touch_comfortable"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:importantForAccessibility="yes"
+                android:textColor="@color/on_dark"
+                android:textSize="@dimen/text_small"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/nav_profile_default" />
+        </LinearLayout>
+
+        <!-- ════════ OBSTACLE ALERT BANNER ════════ -->
+        <LinearLayout
+            android:id="@+id/nav_obstacle_alert"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:background="@drawable/bg_alert_banner"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/space_lg"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="@dimen/icon_md"
+                android:layout_height="@dimen/icon_md"
+                android:src="@drawable/ic_obstacle"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:id="@+id/tv_nav_alert_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/space_md"
+                android:text="@string/nav_obstacle_alert"
+                android:textColor="@color/status_error"
+                android:textSize="@dimen/text_body"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ════════ DIRECTION ARROW CENTER ════════ -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/iv_direction_arrow"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_direction_arrow"
+            android:rotation="-90"
+            android:contentDescription="@string/nav_direction_ahead"
+            android:importantForAccessibility="yes" />
+
+        <TextView
+            android:id="@+id/tv_nav_direction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:text="@string/nav_direction_ahead"
+            android:textColor="@color/ai_active"
+            android:textSize="@dimen/text_body_lg"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <!-- ════════ BOTTOM GUIDANCE SHEET ════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bottom_sheet"
+            android:elevation="@dimen/elevation_sheet"
+            android:orientation="vertical"
+            android:padding="@dimen/space_2xl"
+            android:paddingBottom="112dp">
+
+            <!-- Handle bar -->
+            <View
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_confidence_bar" />
+
+            <!-- Voice guidance label -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xl"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_md"
+                    android:layout_height="@dimen/icon_md"
+                    android:src="@drawable/ic_ai_wave"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_sm"
+                    android:text="@string/nav_guidance_label"
+                    android:textColor="@color/muted"
+                    android:textSize="@dimen/text_small"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.06" />
+            </LinearLayout>
+
+            <!-- Navigation status / instructions -->
+            <TextView
+                android:id="@+id/tv_nav_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md"
+                android:text="@string/nav_status_ready"
+                android:textColor="@color/ink"
+                android:textSize="@dimen/text_headline"
+                android:fontFamily="sans-serif-medium"
+                android:accessibilityLiveRegion="polite"
+                android:importantForAccessibility="yes"
+                android:lineSpacingMultiplier="1.3"
+                android:minHeight="@dimen/touch_large" />
+
+            <!-- "You said" live transcript strip — proof the mic works -->
+            <include
+                layout="@layout/view_heard_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="0dp"
+                android:layout_marginEnd="0dp"
+                android:layout_marginTop="0dp" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <include layout="@layout/view_mic_fab" />
+
+</FrameLayout>

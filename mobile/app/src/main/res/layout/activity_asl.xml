@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ASL DETECTION — Back | Title | Help · detected phrase (live) · speak.
+
+    Reading order:
+      1. Back              (button)
+      2. "ASL Detection"   (heading)
+      3. Help              (button)
+      4. Detected phrase   (live region, polite)
+      5. Speak phrase      (button — primary, bottom thumb zone)
+    Focusables: 4.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/canvas"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/page_margin"
+    android:paddingEnd="@dimen/page_margin"
+    android:paddingTop="@dimen/space_3xl"
+    android:paddingBottom="@dimen/space_lg">
+
+    <!-- ── Top bar: Back | Title | Help ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/btn_asl_back"
+            android:layout_width="@dimen/touch_comfortable"
+            android:layout_height="@dimen/touch_comfortable"
+            android:background="@drawable/bg_icon_btn_focusable"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/btn_back_desc"
+            android:importantForAccessibility="yes"
+            android:padding="@dimen/space_md"
+            android:src="@drawable/ic_back_arrow"
+            app:tint="@color/ink" />
+
+        <TextView
+            android:id="@+id/tv_asl_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_sm"
+            android:layout_weight="1"
+            android:accessibilityHeading="true"
+            android:fontFamily="sans-serif-medium"
+            android:importantForAccessibility="yes"
+            android:text="@string/asl_title"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_title" />
+
+        <ImageView
+            android:id="@+id/btn_asl_help"
+            android:layout_width="@dimen/touch_comfortable"
+            android:layout_height="@dimen/touch_comfortable"
+            android:background="@drawable/bg_icon_btn_focusable"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/btn_help_desc"
+            android:importantForAccessibility="yes"
+            android:padding="@dimen/space_md"
+            android:src="@drawable/ic_ai_wave"
+            app:tint="@color/ink" />
+    </LinearLayout>
+
+    <!-- ── Detected phrase — huge, live region ── -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_xl"
+        android:fontFamily="sans-serif-medium"
+        android:importantForAccessibility="no"
+        android:letterSpacing="0.06"
+        android:text="@string/asl_detected_label"
+        android:textColor="@color/muted"
+        android:textSize="@dimen/text_small" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_sm"
+        android:layout_weight="1"
+        android:background="@drawable/bg_card_focusable"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/space_lg">
+
+        <TextView
+            android:id="@+id/tv_asl_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityLiveRegion="polite"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:lineSpacingMultiplier="1.3"
+            android:text="@string/asl_no_detection"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_headline" />
+    </LinearLayout>
+
+    <!-- ── Primary action — bottom thumb zone ── -->
+    <Button
+        android:id="@+id/btn_asl_speak"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/touch_comfortable"
+        android:layout_marginTop="@dimen/space_lg"
+        android:background="@drawable/bg_btn_primary_focusable"
+        android:contentDescription="@string/asl_speak_btn"
+        android:fontFamily="sans-serif-medium"
+        android:importantForAccessibility="yes"
+        android:text="@string/asl_speak_btn"
+        android:textAllCaps="false"
+        android:textColor="@color/on_primary"
+        android:textSize="@dimen/text_body" />
+
+</LinearLayout>

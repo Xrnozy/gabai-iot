@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GabAi</string>
+
+    <!-- ── Dashboard ── -->
+    <string name="dashboard_greeting">Good morning</string>
+    <string name="dashboard_subtitle">How can I help you today?</string>
+    <string name="dashboard_ai_status">AI Assistant Active</string>
+    <string name="dashboard_ai_listening">Listening…</string>
+    <string name="voice_listening_desc">Voice commands listening</string>
+    <string name="voice_awaiting_desc">Listening. Say a command</string>
+    <string name="voice_loading_desc">Voice model loading</string>
+    <string name="voice_loading_hint">Loading voice model. One moment…</string>
+    <string name="heard_label">YOU SAID · LIVE MIC</string>
+    <string name="heard_idle">Listening…</string>
+    <string name="heard_loading">Loading voice model…</string>
+
+    <!-- Dashboard cards -->
+    <string name="card_color_title">Color</string>
+    <string name="card_color_desc">Identify colors around you</string>
+    <string name="card_nav_title">Navigation</string>
+    <string name="card_nav_desc">Voice-guided obstacle awareness</string>
+    <string name="card_ocr_title">Read Text</string>
+    <string name="card_ocr_desc">Scan and read text aloud</string>
+    <string name="card_settings_title">Settings</string>
+    <string name="card_settings_desc">Voice, speech, vibration, vision profile</string>
+
+    <!-- ── Color Detection Page ── -->
+    <string name="color_title">Color Detection</string>
+    <string name="color_status_ready">Point the camera at an object…</string>
+    <string name="color_detected_label">Detected Color</string>
+    <string name="color_no_detection">Analyzing…</string>
+    <string name="color_announce_btn">Announce Color</string>
+    <string name="color_history_label">Recent Colors</string>
+    <string name="color_confidence">Confidence</string>
+
+    <!-- ── Smart Navigation Page ── -->
+    <string name="nav_title">Smart Navigation</string>
+    <string name="nav_status_ready">Starting navigation…</string>
+    <string name="nav_search_hint">Where do you want to go?</string>
+    <string name="nav_listening">Listening for directions…</string>
+    <string name="nav_guidance_label">Voice Guidance</string>
+    <string name="nav_obstacle_alert">Obstacle Detected</string>
+    <string name="nav_route_info">Route Information</string>
+    <string name="nav_safe_path">Following suggested path</string>
+    <string name="nav_direction_ahead">Continue ahead</string>
+    <string name="nav_profile_default">Profile: All zones</string>
+    <string name="nav_profile_picker_title">Vision profile</string>
+    <string name="nav_profile_chip_desc">Vision profile. Double-tap to change which directions are announced.</string>
+    <string name="nav_profile_zones_title">Zones to announce</string>
+    <string name="nav_profile_steering_on">Steering guidance: on</string>
+    <string name="nav_profile_steering_off">Steering guidance: off</string>
+    <string name="nav_profile_set">Profile set: %1$s</string>
+    <string name="nav_connection_lost">Connection lost. Limited guidance</string>
+
+    <!-- ── OCR Reader Page ── -->
+    <string name="ocr_title">Read Text</string>
+    <string name="ocr_status_ready">Point the camera at text…</string>
+    <string name="ocr_extracted_label">Extracted Text</string>
+    <string name="ocr_no_text">No text detected yet</string>
+    <string name="ocr_read_aloud">Read Aloud</string>
+    <string name="ocr_confidence">Confidence</string>
+    <string name="ocr_connected_status">Connected. Text will be read aloud when it appears</string>
+    <string name="ocr_offline_status">Offline. Check that the server is running</string>
+    <string name="ocr_scanning">Scanning…</string>
+
+    <!-- ── ASL Detection Page ── -->
+    <string name="asl_title">ASL Detection</string>
+    <string name="asl_detected_label">Detected Sign</string>
+    <string name="asl_no_detection">Point the camera at hands…</string>
+    <string name="asl_speak_btn">Speak Phrase</string>
+    <string name="btn_help_desc">Help. Hear how this screen works</string>
+    <string name="asl_help">A S L detection. Point the camera at someone signing. The detected phrase appears on screen and is read aloud when recognized. Tap Speak phrase to repeat it. Say back to leave.</string>
+
+    <!-- ── Onboarding ── -->
+    <string name="onboard_welcome_title">Welcome to GabAi</string>
+    <string name="onboard_welcome_desc">GabAi describes what your camera sees, reads text out loud, and warns you about things in your way. It works best with your voice. Everything on this phone stays private.</string>
+    <string name="onboard_get_started">Get started</string>
+    <string name="onboard_hero_desc">A person wearing sunglasses holding a smartphone up to speak to it</string>
+    <string name="onboard_vision_title">What can you see?</string>
+    <string name="onboard_vision_desc">Pick the one that sounds most like you. GabAi will warn you about things hiding in the spots you can\'t see.</string>
+    <string name="onboard_vision_left">Blurry on my left</string>
+    <string name="onboard_vision_left_desc">I can\'t see well on my left side</string>
+    <string name="onboard_vision_right">Blurry on my right</string>
+    <string name="onboard_vision_right_desc">I can\'t see well on my right side</string>
+    <string name="onboard_vision_tunnel">Tunnel vision</string>
+    <string name="onboard_vision_tunnel_desc">I only see the middle, not the sides</string>
+    <string name="onboard_vision_central">Blurry center</string>
+    <string name="onboard_vision_central_desc">I see the sides, but the middle is blurry</string>
+    <string name="onboard_vision_all">Little or no vision</string>
+    <string name="onboard_vision_all_desc">Tell me about everything around me</string>
+    <string name="onboard_permissions_title">Camera and microphone</string>
+    <string name="onboard_permissions_desc">GabAi needs the camera to see for you, and the microphone to hear \"Gab\" commands. Your video and voice stay on this device.</string>
+    <string name="onboard_allow">Allow permissions</string>
+    <string name="onboard_explore_title">Explore by touch</string>
+    <string name="onboard_explore_desc">Hold your finger on anything and Gab reads what it is. You will feel a little buzz when you touch something it can read. Turn it off anytime in Settings, under Accessibility.</string>
+    <string name="onboard_skip">Skip</string>
+    <string name="onboard_finish">Finish</string>
+    <string name="onboard_continue">Continue</string>
+    <string name="onboard_back">Back</string>
+
+    <!-- ── Settings ── -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_voice">Voice control</string>
+    <string name="settings_voice_commands">Voice commands</string>
+    <string name="settings_voice_commands_desc">Listen for command words like \"walk\" and \"back\" on every screen</string>
+    <string name="settings_wake_name">Say \"Gab\" first</string>
+    <string name="settings_wake_name_desc">On: commands need the wake word, like \"Gab, walk\". Off: command words work on their own.</string>
+    <string name="settings_screen_off">Screen-off listening</string>
+    <string name="settings_screen_off_desc">Keep hearing \"Gab\" while the screen is off. Uses battery; a notification shows while the mic is on.</string>
+    <string name="settings_live_transcript">Show what I say</string>
+    <string name="settings_live_transcript_desc">Show everything the mic hears on screen. Keeps commands working even when speech detection fails. Uses battery.</string>
+    <string name="settings_section_audio">Audio</string>
+    <string name="settings_speech">Spoken feedback</string>
+    <string name="settings_speech_desc">Read guidance and status out loud</string>
+    <string name="settings_speech_rate">Speech speed</string>
+    <string name="settings_rate_slow">Slow</string>
+    <string name="settings_rate_normal">Normal</string>
+    <string name="settings_rate_fast">Fast</string>
+    <string name="settings_section_accessibility">Accessibility</string>
+    <string name="settings_touch_explore">Touch explore</string>
+    <string name="settings_touch_explore_desc">Hold your finger on a button to hear its name. A soft effect shows where you\'re touching</string>
+    <string name="settings_haptics">Vibration</string>
+    <string name="settings_haptics_desc">Vibrate for taps and hazard warnings</string>
+    <string name="settings_section_vision">Vision profile</string>
+    <string name="settings_vision_profile">Change vision profile</string>
+    <string name="settings_vision_profile_desc">Which directions GabAi warns you about</string>
+    <string name="settings_high_contrast">High contrast</string>
+    <string name="settings_high_contrast_desc">Brighter text, easier to read</string>
+    <string name="settings_large_text">Large text</string>
+    <string name="settings_large_text_desc">Bigger text on every screen</string>
+    <string name="settings_font_size">Font size</string>
+    <string name="settings_font_size_desc">Drag to scale all text in the app</string>
+    <string name="settings_captions">Show what Gabai says</string>
+    <string name="settings_captions_desc">Shows Gabai\'s speech as text on screen, for helpers and quiet places.</string>
+    <string name="caption_label">GABAI SAID</string>
+    <string name="caption_empty">Nothing yet</string>
+    <string name="settings_section_helper">For helpers</string>
+    <string name="settings_server_url">Server address</string>
+    <string name="settings_server_url_desc">Where the vision server runs, e.g. http://192.168.1.5:8080</string>
+    <string name="settings_replay_tutorial">Replay the tutorial</string>
+    <string name="settings_replay_tutorial_desc">Show the setup screens again</string>
+    <string name="settings_mic_source">Microphone</string>
+    <string name="settings_mic_source_desc">Which mic GabAi listens on. Speech still plays through connected headphones</string>
+    <string name="settings_camera_source">Camera</string>
+    <string name="settings_camera_source_desc">Phone camera or USB webcam for navigation, color, text, and A S L. Applies next time you open a camera mode.</string>
+    <string name="camera_source_phone">Phone camera</string>
+    <string name="camera_source_uvc">USB webcam (UVC)</string>
+    <string name="mic_source_auto">Automatic</string>
+    <string name="mic_source_phone">Phone microphone</string>
+    <string name="mic_source_headset">Headset microphone</string>
+    <string name="settings_output_device">Speaker or headphones</string>
+    <string name="settings_output_device_desc">Choose where GabAi\'s voice plays</string>
+    <string name="output_phone_speaker">Phone speaker</string>
+    <string name="settings_section_debug">Debug</string>
+    <string name="settings_debug_get_started">Show get started screen</string>
+    <string name="settings_debug_get_started_desc">Resets first-run state and replays the full onboarding flow</string>
+    <string name="settings_reset">Reset everything</string>
+    <string name="settings_reset_desc">Clear all settings and start setup over</string>
+
+    <!-- ── Common ── -->
+    <string name="conn_connecting">Connecting…</string>
+    <string name="conn_offline">Offline</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_back_desc">Go back to dashboard</string>
+    <string name="mic_desc">Microphone. Tap to speak</string>
+    <string name="mic_fab_desc">Speak a command. Tap, then say what you need</string>
+    <string name="ai_powered">Powered by Android TTS</string>
+    <string name="card_family_title">Family &amp; safety</string>
+    <string name="card_family_desc">Share location, caregiver view</string>
+    <string name="card_sos_title">Emergency SOS</string>
+    <string name="card_sos_desc">Alert your caregivers</string>
+</resources>

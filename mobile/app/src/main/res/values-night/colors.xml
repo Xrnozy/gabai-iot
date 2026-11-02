@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================================================================
+         GabAi design tokens — TESLA DARK palette (system dark mode =
+         the app's default look). Pure-black canvas, white text, one
+         electric-blue accent. All text/background pairs >= WCAG AAA
+         7:1 for normal text, >= 4.5:1 for >=20sp bold UI text.
+         See mobile/DESIGN_SYSTEM.md for measured ratios.
+         ================================================================== -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- ── Surfaces: pure black + deep-charcoal cards (separation
+         through spacing + subtle value, never borders or shadows) ── -->
+    <color name="canvas">#FF000000</color>
+    <color name="canvas_secondary">#FF0A0A0A</color>
+    <color name="surface_card">#FF141414</color>
+    <color name="surface_card_elevated">#FF1C1C1C</color>
+    <color name="surface_dark">#FF000000</color>
+    <color name="surface_dark_elevated">#FF141414</color>
+    <color name="surface_dark_card">#FF1C1C1C</color>
+
+    <!-- ── Hairlines & Dividers (decorative only) ── -->
+    <color name="hairline">#1FFFFFFF</color>
+    <color name="hairline_dark">#1FFFFFFF</color>
+
+    <!-- ── Text: white-on-black, all >= 8:1 ── -->
+    <color name="ink">#FFFFFFFF</color>            <!-- 21.0:1 on black -->
+    <color name="body">#FFE0E0E0</color>           <!-- 15.6:1 -->
+    <color name="muted">#FFA3A3A3</color>          <!--  8.4:1 -->
+    <color name="on_dark">#FFFFFFFF</color>
+    <color name="on_dark_soft">#FFE0E0E0</color>
+    <color name="on_dark_muted">#FFA3A3A3</color>
+
+    <!-- ── Primary accent (#3E6AE1 fill for big buttons — 4.6:1 white
+         text = AAA large-text; #7C9BFF for small accents/focus —
+         ~8:1 on black) ── -->
+    <color name="primary">#FF3E6AE1</color>
+    <color name="primary_light">#FF5B7FE8</color>
+    <color name="primary_active">#FF2F56C4</color>
+    <color name="primary_soft">#1A3E6AE1</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="focus_ring">#FF7C9BFF</color>      <!-- ~8.0:1 on black -->
+
+    <!-- ── Semantic (AAA on black — brightened for contrast) ── -->
+    <color name="status_success">#FF4CAF50</color>  <!-- ~7.4:1 -->
+    <color name="status_warning">#FFFFB340</color>  <!-- ~10.5:1 -->
+    <color name="status_error">#FFFF5B4D</color>    <!-- ~7.8:1 -->
+    <color name="status_info">#FF7C9BFF</color>
+
+    <!-- ── Solid (gradients banned) ── -->
+    <color name="gradient_warm_start">#FF000000</color>
+    <color name="gradient_warm_end">#FF000000</color>
+    <color name="gradient_nav_start">#FF000000</color>
+    <color name="gradient_nav_end">#FF000000</color>
+
+    <!-- ── Overlays ── -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#40FFFFFF</color>
+    <color name="camera_overlay">#CC000000</color>
+
+    <!-- ── AI accents ── -->
+    <color name="glow_coral">#407C9BFF</color>
+    <color name="glow_blue">#407C9BFF</color>
+    <color name="ai_active">#FF7C9BFF</color>
+    <color name="ai_listening">#FF4CAF50</color>
+
+    <!-- ── Card icon tints: monochrome, accent for navigation ── -->
+    <color name="icon_asl">#FFA3A3A3</color>
+    <color name="icon_color">#FFA3A3A3</color>
+    <color name="icon_nav">#FF7C9BFF</color>
+    <color name="icon_ocr">#FFA3A3A3</color>
+</resources>

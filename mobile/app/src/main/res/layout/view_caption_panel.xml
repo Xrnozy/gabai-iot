@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared "Gabai said" caption panel — live transcript of TTS output for
+     sighted helpers and quiet environments. importantForAccessibility=no:
+     TalkBack users already heard the line spoken, re-announcing it is noise. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/caption_panel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/page_margin"
+    android:layout_marginEnd="@dimen/page_margin"
+    android:layout_marginTop="@dimen/space_lg"
+    android:background="@drawable/bg_card_cream"
+    android:elevation="@dimen/elevation_card"
+    android:orientation="vertical"
+    android:padding="@dimen/space_lg"
+    android:importantForAccessibility="no"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/caption_label"
+        android:textColor="@color/muted"
+        android:textSize="@dimen/text_small"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.08" />
+
+    <TextView
+        android:id="@+id/tv_caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_sm"
+        android:text="@string/caption_empty"
+        android:textColor="@color/ink"
+        android:textSize="@dimen/text_body"
+        android:fontFamily="sans-serif"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:lineSpacingMultiplier="1.4" />
+</LinearLayout>

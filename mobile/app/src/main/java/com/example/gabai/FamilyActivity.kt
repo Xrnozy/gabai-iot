@@ -1,0 +1,133 @@
+package com.example.gabai
+
+import android.Manifest
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.text.format.DateUtils
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import com.example.gabai.caregiver.CaregiverActivity
+import com.example.gabai.safety.Emergency
+import com.example.gabai.safety.LiveState
+import com.example.gabai.safety.TrackingService
+import com.example.gabai.safety.Uplink
+import com.example.gabai.services.SettingsStore
+import com.example.gabai.ui.Level
+import com.example.gabai.ui.Ui
+import androidx.activity.result.contract.ActivityResultContracts
+
+/**
+ * The blind user's side of "Family & safety": switch location sharing and fall detection on, press SOS, and connect this phone
+ * to the relay. Caregivers open the dashboard from the same screen on their own phone.
+ */
+class FamilyActivity : BaseActivity() {
+
+    private lateinit var status: LinearLayout
+    private lateinit var toggle: android.widget.TextView
+    private lateinit var url: EditText
+    private lateinit var phoneToken: EditText
+    private lateinit var caregiverToken: EditText
+    private lateinit var name: EditText
+    private val onChange: () -> Unit = { runOnUiThread { renderStatus() } }
+
+    private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r[Manifest.permission.ACCESS_FINE_LOCATION] == true || r[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            TrackingService.start(this)
+            renderStatus()
+        } else {
+            LiveState.gpsState = "denied"
+            renderStatus()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val c = this
+        val col = Ui.column(c, 24)
+
+        col.addView(Ui.button(c, "← Back", Ui.Kind.SECONDARY, "Back to home. Button.") { finish() }, Ui.lp(ctx = c))
+        col.addView(Ui.title(c, "Family & safety"), Ui.lp(top = 16, ctx = c))
+        col.addView(Ui.caption(c, "Share your location with people you trust. They can see where you are, how the device is doing, and get alerted if you need help."), Ui.lp(top = 4, ctx = c))
+
+        val share = Ui.card(c, "Share my location").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
+        status = Ui.column(c)
+        share.addView(status, Ui.lp(top = 8, ctx = c))
+        toggle = Ui.button(c, "", Ui.Kind.PRIMARY) { toggleSharing() }
+        share.addView(toggle, Ui.lp(top = 16, ctx = c))
+        share.addView(Ui.button(c, "Emergency SOS", Ui.Kind.DANGER, "Emergency SOS. Alerts your caregivers after a 5 second countdown you can cancel. Button.") {
+            Emergency.startSos(c); Emergency.openScreen()
+        }, Ui.lp(top = 12, ctx = c))
+        share.addView(Ui.caption(c, "Falls are detected from this phone's motion sensors. You always get a 20 second countdown to cancel before anyone is alerted."), Ui.lp(top = 12, ctx = c))
+
+        val conn = Ui.card(c, "Connection").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
+        url = Ui.field(c, "Relay address, for example http://100.66.233.67:8090", SettingsStore.getRelayUrl(c))
+        phoneToken = Ui.field(c, "This phone's token", SettingsStore.getRelayToken(c, SettingsStore.ROLE_PHONE), secret = true)
+        caregiverToken = Ui.field(c, "Caregiver token (only on a caregiver's phone)", SettingsStore.getRelayToken(c, SettingsStore.ROLE_CAREGIVER), secret = true)
+        name = Ui.field(c, "Your name, shown when you acknowledge an alert", SettingsStore.getCaregiverName(c))
+        listOf(url, phoneToken, caregiverToken, name).forEach { conn.addView(it, Ui.lp(top = 12, ctx = c)) }
+        conn.addView(Ui.button(c, "Save connection", Ui.Kind.SECONDARY) { saveConnection() }, Ui.lp(top = 16, ctx = c))
+
+        val cg = Ui.card(c, "Caregiver dashboard").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
+        cg.addView(Ui.caption(c, "For family and caregivers: live location, camera, alerts and device health."), Ui.lp(top = 4, ctx = c))
+        cg.addView(Ui.button(c, "Open caregiver dashboard", Ui.Kind.PRIMARY) {
+            saveConnection()
+            if (SettingsStore.getRelayToken(c, SettingsStore.ROLE_CAREGIVER).isBlank()) {
+                caregiverToken.error = "Enter the caregiver token first"; caregiverToken.requestFocus()
+            } else startActivity(Intent(c, CaregiverActivity::class.java))
+        }, Ui.lp(top = 12, ctx = c))
+
+        col.addView(Ui.space(c, 48))
+        setContentView(ScrollView(c).apply { setBackgroundColor(Ui.color(c, R.color.canvas)); addView(col); isFillViewport = true })
+    }
+
+    override fun onStart() { super.onStart(); LiveState.listen(onChange); renderStatus() }
+    override fun onStop() { LiveState.unlisten(onChange); super.onStop() }
+
+    private fun saveConnection() {
+        SettingsStore.setRelayUrl(this, url.text.toString())
+        SettingsStore.setRelayToken(this, SettingsStore.ROLE_PHONE, phoneToken.text.toString())
+        SettingsStore.setRelayToken(this, SettingsStore.ROLE_CAREGIVER, caregiverToken.text.toString())
+        SettingsStore.setCaregiverName(this, name.text.toString())
+    }
+
+    private fun toggleSharing() {
+        saveConnection()
+        if (LiveState.trackingRunning) {
+            TrackingService.stop(this)
+            toggle.postDelayed({ renderStatus() }, 300)
+            return
+        }
+        if (SettingsStore.getRelayToken(this, SettingsStore.ROLE_PHONE).isBlank()) {
+            phoneToken.error = "Enter this phone's token first"; phoneToken.requestFocus(); return
+        }
+        val wanted = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (Build.VERSION.SDK_INT >= 33) wanted += Manifest.permission.POST_NOTIFICATIONS
+        permissions.launch(wanted.toTypedArray())
+    }
+
+    private fun renderStatus() {
+        val c = this
+        status.removeAllViews()
+        val running = LiveState.trackingRunning
+        toggle.text = if (running) "Stop sharing" else "Start sharing"
+        toggle.contentDescription = if (running) "Stop sharing my location. Button." else "Start sharing my location and fall detection. Button."
+        status.addView(Ui.kv(c, "Sharing", if (running) "On" else "Off", if (running) Level.OK else Level.OFF))
+        val gps = LiveState.gpsState
+        status.addView(Ui.kv(c, "GPS", when (gps) {
+            "ok" -> "Good signal"; "weak" -> "Weak signal"; "searching" -> "Searching for signal"
+            "denied" -> "Permission needed"; "disabled" -> "Location is switched off"; else -> "Off" },
+            when (gps) { "ok" -> Level.OK; "weak", "searching" -> Level.WARN; "denied", "disabled" -> Level.BAD; else -> Level.OFF }))
+        val relay = if (!running) null else LiveState.relayOk
+        status.addView(Ui.kv(c, "Relay server", when (relay) { true -> "Connected"; false -> LiveState.relayError ?: "Not connected"; null -> "Not used" },
+            when (relay) { true -> Level.OK; false -> Level.BAD; null -> Level.OFF }))
+        if (LiveState.lastSuccessMs > 0) {
+            status.addView(Ui.kv(c, "Last upload", DateUtils.getRelativeTimeSpanString(LiveState.lastSuccessMs, System.currentTimeMillis(), DateUtils.SECOND_IN_MILLIS).toString()))
+        }
+        val queued = Uplink.pending()
+        if (queued > 0) status.addView(Ui.kv(c, "Waiting to send", "$queued", Level.WARN))
+        status.visibility = View.VISIBLE
+    }
+}

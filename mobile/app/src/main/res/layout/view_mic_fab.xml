@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Big mic fallback — tap to open the command window without the wake
+     word. Anchored bottom-center: easiest reach for one-handed use. -->
+<ImageButton xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/btn_mic_fab"
+    android:layout_width="88dp"
+    android:layout_height="88dp"
+    android:layout_gravity="bottom|center_horizontal"
+    android:layout_marginBottom="24dp"
+    android:background="@drawable/bg_fab_mic"
+    android:elevation="8dp"
+    android:padding="24dp"
+    android:scaleType="fitCenter"
+    android:src="@drawable/ic_mic"
+    android:contentDescription="@string/mic_fab_desc"
+    android:importantForAccessibility="yes"
+    app:tint="@color/on_primary" />

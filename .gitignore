@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Model weights (see models/README.md)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.engine
+*.task
+checkpoints/
+third_party/
+
+# Large data, recordings, generated output
+data/
+datasets/
+outputs/
+logs/
+Aria Research/
+*.log
+*.out
+*.npz
+*.mp4
+*.avi
+!docs/*.mp4
+sync30*_frames.csv
+*.bak
+*.bak_*
+*.tmp
+
+# Mobile build
+mobile/local.properties
+mobile/.gradle/
+mobile/.gradle-user-home/
+mobile/.kotlin/
+mobile/.idea/
+mobile/app/build/
+mobile/build/
+*.apk
+*.aab
+
+# Local config/secrets, OS, IDE
+.env
+*.pem
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Mobile on-device model assets (see models/README.md) and map databases
+mobile/app/src/main/assets/models/
+mobile/app/src/main/assets/*.cact
+mobile/app/src/main/assets/*.7z
+*.bin
+*.db
+rtabmap_lab/maps/
+rtabmap_lab/runs/
+rtabmap_lab/deps/
+*.ply
+*.zip

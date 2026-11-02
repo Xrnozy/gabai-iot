@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic to specific IP for development/LAN use -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Allow HTTP to server IP on LAN -->
+        <domain includeSubdomains="true">100.118.48.12</domain>
+        <domain includeSubdomains="true">100.91.165.27</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">100.124.181.67</domain>
+        <!-- Must match serverUrl in WebRTCClient.kt — the laptop's current
+             Tailscale IPv4 (run `tailscale ip -4` on the laptop to check). -->
+        <domain includeSubdomains="true">100.66.233.67</domain>
+        <!-- Laptop's LAN IP — direct connection when both devices share
+             the Wi-Fi (ipconfig on the laptop to check). -->
+        <domain includeSubdomains="true">192.168.100.77</domain>
+    </domain-config>
+    
+    <!-- For other domains, enforce HTTPS -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">example.com</domain>
+    </domain-config>
+</network-security-config>

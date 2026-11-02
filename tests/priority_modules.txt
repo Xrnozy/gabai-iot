@@ -1,0 +1,39 @@
+# The focused set. One module per line; run with:  py scripts/run_tests.py --priority
+# Everything else is deferred:                      py scripts/run_tests.py --deferred
+# Nothing was deleted. A module is in this list when a failure in it would make the map, the depth, the video/3D synchronisation or the obstacle
+# warnings wrong. Modules left out cover other parts (hands and objects, IMU, spec phases 3-6 beyond the map, diagnostics plumbing, Pi hardware tools).
+
+# map: voxels, growth, point-cloud stability
+test_cloud
+test_map_growth
+test_mapref
+test_slam_cloud
+test_relocalize
+test_preview3d
+# pose
+test_kfvo
+test_video_cloud
+# depth validity and geometry
+test_lr_check
+test_diag_checks
+test_stereo_calib
+test_stereo_alignment_check
+test_autorect
+# video / 3D synchronisation, pairing, the pipeline end to end
+test_pairing
+test_replay
+test_failure_modes
+test_perf
+test_pipeline_run
+test_pipeline_config
+test_pipeline_diag
+# safety: obstacle warnings and navigation first
+test_alerts_and_zones
+test_zones_evidence
+test_live_alerts
+test_temporal_filter
+test_navguard
+test_heading
+test_compass_fusion
+test_frames
+test_calibrate_sensors

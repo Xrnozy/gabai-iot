@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared "You said" live-transcript strip — the visible proof that the
+     mic and Whisper are running. Shows the latest text the STT produced,
+     so a working pipeline is obvious instead of implied.
+     importantForAccessibility=no: TalkBack users get spoken feedback
+     already; re-announcing partial transcripts is noise. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/heard_panel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/page_margin"
+    android:layout_marginEnd="@dimen/page_margin"
+    android:layout_marginTop="@dimen/space_lg"
+    android:background="@drawable/bg_card_cream"
+    android:elevation="@dimen/elevation_card"
+    android:orientation="vertical"
+    android:padding="@dimen/space_lg"
+    android:importantForAccessibility="no"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/heard_label"
+        android:textColor="@color/ai_listening"
+        android:textSize="@dimen/text_small"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.08" />
+
+    <TextView
+        android:id="@+id/tv_heard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_sm"
+        android:text="@string/heard_idle"
+        android:textColor="@color/ink"
+        android:textSize="@dimen/text_body"
+        android:fontFamily="sans-serif"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:lineSpacingMultiplier="1.4" />
+</LinearLayout>

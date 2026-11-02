@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Emergency action: error fill, accent ring when focused. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/status_error" />
+            <stroke android:width="@dimen/focus_ring_width" android:color="@color/ink" />
+            <corners android:radius="@dimen/radius_lg" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/status_error" />
+            <stroke android:width="@dimen/focus_ring_width" android:color="@color/on_primary" />
+            <corners android:radius="@dimen/radius_lg" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/status_error" />
+            <corners android:radius="@dimen/radius_lg" />
+        </shape>
+    </item>
+</selector>

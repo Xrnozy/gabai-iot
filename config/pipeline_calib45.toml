@@ -1,0 +1,123 @@
+# Gabai Rerun pipeline. Run:  py -m gabai.tools.rerun_pipeline --config config/pipeline.toml [--mode stereo_imu]
+# Command-line options override this file.
+
+[pipeline]
+# stereo_only : stereo cameras only. The IMU is not opened, not read, not required. Pose from our own stereo visual odometry (drifts, no gravity).
+# stereo_imu  : stereo cameras + IMU in Basalt's visual-inertial estimator. Needs a recording (or live stream) with IMU, calibration and extrinsics.
+mode = "stereo_only"
+
+[source]
+imu_sync = "data/imu_sync_corrected.json"   # data/imu_sync.json with R_ci turned 180 deg about the optical axis (see the note inside); the original file is untouched
+kind = "video"                   # video : two plain video files        recording : EuRoC folder written by record_basalt / live_basalt
+left = "data/left.mp4"
+right = "data/right.mp4"
+folder = ""                      # for kind = "recording", e.g. "data/slam/live_20261026_181526"
+start = 0.0                      # seconds into the video (video only)
+skip = 2                         # use every Nth frame
+max_frames = 300                 # 0 = the whole sequence
+calib = "data/stereo_calib_charuco_45.npz"   # 45 mm monitor board, baseline 46.84 mm
+flip180 = true                   # live only: the rig's pictures come out upside down, so both rectified pictures are turned 180 deg (they trade places, the calibration stays valid). --no-flip180 turns it off for one run
+
+[stereo]
+model = "s"                      # LAS2 size: s, m, h
+width = 640                      # video only: frames are resized to this width
+f_frac = 0.6                     # video only, ASSUMED focal length as a fraction of width (no calibration for plain video)
+baseline = 0.065                 # video only, ASSUMED camera spacing in metres
+mono = "dav2"                    # monocular metric depth (Depth Anything V2 Metric Indoor Small): scaled to the trusted stereo pixels, it supplies the holes; "" = off
+mono_mode = "fill"               # fill: ONLY the pixels stereo did not measure (marked, down-weighted, kept in a separate layer of the map); blend / check: see gabai/pipeline/config.py
+mono_pair = true                 # run the monocular model on both pictures; a hole is filled only where the left and right monocular maps agree (they are averaged there)
+depth_correction = "data/calibration/depth_correction.json"   # distance correction fitted on data/calib_pairs_15 (py -m gabai.tools.fit_depth_correction); valid 0.35-0.75 m, nothing outside
+
+[imu]
+still_gate = "auto"              # stereo_imu only: auto = use the gate if the recording holds still at the start, otherwise start at once and warn
+
+[map]
+voxel = 0.03                     # was 0.05: finer points; 300000 voxels still cover the 8 m window
+max_range = 3.0                  # was 4.0: with a 41.7 mm baseline the depth error at 4 m is about 19 cm
+semi_dense = true
+stride = 2                       # was 3: every 2nd pixel row and column of the textured pixels
+weighted = true                  # near (precise) points count for more than far (noisy) ones in each voxel's mean: weight 1 / depth variance
+max_depth_std = 0.05             # was 0 (no limit): keeps points to about 2.1 m. Drop points whose depth standard deviation (z^2 * 0.3 px / (f * B)) is above this many metres; 0 = no limit
+max_voxels = 300000              # hard cap on map size (about 14 MB): voxels seen under 3 times go first, then the farthest from the camera; 0 = no cap
+max_pose_step_m = 0.5            # a pose that jumps farther than this between two frames is not trusted and its frame is not added to the map; 0 = off
+max_misalign_cm = 6.0           # a frame whose pose puts the map more than this far (median) from its own measured depth is NOT added to the map; 0 = off
+tsdf = true                      # also fuse depth into an Open3D TSDF volume and draw its mesh as world/tsdf_mesh in Rerun (gabai/tsdf.py); about 5 ms per map frame measured
+tsdf_voxel = 0.02
+tsdf_trunc = 0.08
+tsdf_every = 30                  # redraw the mesh every 30 map frames
+surface_filter = true             # map and camera-POV mesh take only pixels on a real connected surface (no flying points at depth edges, no small islands)
+fill_reach_px = 40                # the monocular fill only reaches this far (px) from a trusted stereo pixel
+reset_after_frames = 30          # this many such frames in a row: drop the map within forget_radius_m of the camera and rebuild from the current pose; 0 = never
+forget_radius_m = 3.0            # ...only that part: the rest of the map stays (0 = the whole map, the old behaviour)
+core = 0.2                       # shown map: drop a voxel seen under this fraction as often as its busiest neighbour (0.7, the old value, kept 7% of a real map)
+window_m = 8.0                   # a point is forgotten once the camera is farther than this from it (bounds memory); 0 = keep everything
+carve_m = 0.3                    # a voxel the camera itself passes through is forgotten: a camera cannot be inside a solid; 0 = off
+carve_decay = 0.6               # a stored voxel the camera now sees THROUGH (the depth around its pixel is farther, by more than the noise) keeps 0.6 of its evidence per look and goes when none is left: a moved or removed thing leaves the map; 0 = off
+fill_weight = 0.3                # a monocular-filled point counts this much of a stereo point of the same distance
+refine_pose = true               # stereo_only: register each frame to the map, apply a small damped correction, tell the odometry (gabai/mapref.py)
+refine_max_shift_m = 0.06        # a larger correction is not trusted and not applied
+refine_every = 2                 # try the registration every Nth map frame
+save = ""                        # e.g. "data/world_map.npz": write the fused map at the end (gabai.relocalize.load_map reads it)
+# NOT SUPPORTED by the current code, kept for reference: world_map = true                 # the refining world map: one entry per voxel, weighted by depth precision, bounded memory
+# NOT SUPPORTED by the current code, kept for reference: carve = true                     # remove voxels the camera now sees through (moved objects, wrong early points)
+# NOT SUPPORTED by the current code, kept for reference: load = ""                        # start from a saved map and keep refining it
+# NOT SUPPORTED by the current code, kept for reference: ply = ""                         # e.g. "data/cloud.ply": export the semi-dense cloud at the end (optional; nothing is written when empty)
+# NOT SUPPORTED by the current code, kept for reference: save_every = 100
+# NOT SUPPORTED by the current code, kept for reference: display_points = 120000
+
+[tracking]
+vo = "keyframe"                  # stereo_only pose: keyframe = gabai/kfvo.py (less drift, about 2x faster); frame = the original frame-to-frame StereoVO
+fuse_depth = true                # keyframe: average each feature's stereo depth over the frames that see it
+predict = true                   # keyframe: start the feature search where the last motion predicts (guided search; keeps tracking through fast turns)
+refine = true                    # keyframe: Levenberg-Marquardt refinement of each pose on the inliers
+relocalize = true                # keyframe: after lost tracking, find the pose again from ORB features against stored keyframes
+initial_pitch_deg = 0.0          # how far the camera looks below the horizon at the start (chest mount: see py -m gabai.tools.frame_check); makes the SLAM world z truly up
+gyro_prior = true                # keyframe: with gyro samples and the camera-IMU rotation (calib.json), the gyro rotation between frames starts the feature search; pictures still decide the pose
+window_ba = true                 # keyframe: sliding-window bundle adjustment on a worker thread (gabai/localba.py)
+ba_every = 3                     # every Nth keyframe
+ba_window = 6
+ba_max_landmarks = 250
+loop_closure = true              # keyframe: detect a return to an old place (ORB features, verified by PnP), measure the drift
+loop_apply = true                # ...and correct it: a confirmed loop becomes a pose-graph edge, all keyframes are re-optimised, the map is laid again from them
+loop_radius_m = 1.0
+loop_min_path_m = 2.0
+loop_appearance = true           # also look at ALL old keyframes by appearance, not only those near where the camera is believed to be
+loop_every = 2                   # check every 2nd keyframe
+loop_max_drift_m = 2.0           # a loop that would move the pose farther than this (or 0.3 m + 15% of the path since) is refused as a look-alike
+
+[hands]
+enabled = true
+
+[detector]
+enabled = true
+
+[objects3d]
+enabled = true                   # Boxer 3D boxes of static objects, drawn in Rerun (world/boxer/*), pose untouched; runs on its own thread every_s seconds, about 135 ms of GPU per run
+every_s = 0.3
+max_range = 2.0
+graph = false                    # objects as pose-graph factors. Optimized 2026-11-01: corrections eased in over 1 s, skipped unless they help, at most one solve per 8 keyframes (wall time 131-142 s vs 135 s off, 4-5 map re-lays, no jumps). Still no measured drift gain on the desk clip (12.9-14.6 deg vs 13.8-15.8 off): safe to turn on, not proven useful
+
+[perf]
+# Nothing here changes what is computed for depth or pose. These keep drawing and the optional hand/object work from slowing the loop,
+# and keep this tool from taking the CPU away from the navigation viewer if both run on one PC.
+async_viz = true                 # draw in Rerun on a separate thread; heavy picture calls are dropped (and counted) if the viewer cannot keep up
+queue = 6
+viz_scale = 0.5                  # disparity / depth / valid / feature panels are drawn at this fraction of the picture size
+viz_every = 1
+map_log_every = 10
+map_log_max_points = 250000
+detector_every = 3
+low_priority = true
+threads = 0
+fps_cap = 0.0
+prefetch = true                  # decode the video on its own thread
+staged = true                    # depth (stage A) overlaps with pose + map + hands + drawing (stage B)
+stage_queue = 1
+yield_to_navigation = true         # slow down and switch hands/objects off while the navigation viewer is running on this PC
+nav_fps_cap = 3.0
+drop_when_busy = false           # set true for a live stream so the newest frame is never held up by an old one; false for recordings
+
+[viz]
+save = ""                        # path of a .rrd file to write; empty = do not write
+viewer = true                    # open the Rerun window
+pov_mesh = false                 # also draw the textured mesh of the current frame in the POV view (off: the POV view shows the fused TSDF mesh and map from the camera)
