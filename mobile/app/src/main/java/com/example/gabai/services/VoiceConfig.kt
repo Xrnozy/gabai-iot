@@ -56,10 +56,12 @@ data class VoiceConfig(
 
     // ---------- models / recognizer ----------
     val modelFileEn: String = "ggml-base.en-q8_0.bin",
-    /** Whisper Small q5_1 (~181 MB): Filipino FLEURS WER ~26% vs ~50%+ for
-     *  Base, which is unusable for Tagalog. Medium (~16%) and large-v3-turbo
-     *  (~11%) are more accurate but 4-8x heavier on CPU/RAM. */
-    val modelFileMultilingual: String = "ggml-small-q5_1.bin",
+    /** Whisper large-v3-turbo q5_0 (~570 MB): Filipino FLEURS WER ~11% vs
+     *  ~26% for Small q5_1 and ~50%+ for Base, which is unusable for Tagalog.
+     *  4-8x heavier on CPU/RAM than Small; fall back to
+     *  "ggml-small-q5_1.bin" or "ggml-medium-q5_0.bin" if the device
+     *  throttles. */
+    val modelFileMultilingual: String = "ggml-large-v3-turbo-q5_0.bin",
     /** Set true for the English-only Base model (English commands only). */
     val useEnglishModel: Boolean = false,
     /** Explicit ISO-639 code passed to whisper.cpp — never auto-detect
