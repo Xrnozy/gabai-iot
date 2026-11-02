@@ -70,10 +70,11 @@
         <item name="android:textColor">@color/on_tape</item>
     </style>
 
-    <style name="GabAi.Tape.Cell" parent="">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
+    <style name="GabAi.Tape.Icon" parent="">
+        <item name="android:layout_width">@dimen/icon_xl</item>
+        <item name="android:layout_height">@dimen/icon_xl</item>
         <item name="android:layout_marginStart">@dimen/space_lg</item>
+        <item name="android:importantForAccessibility">no</item>
     </style>
 
     <style name="GabAi.Panel" parent="">

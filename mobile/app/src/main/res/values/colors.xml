@@ -56,9 +56,6 @@
     <color name="tape_outline">#FF0E0F12</color>
     <color name="sos_outline">#FFB3261E</color>     <!-- 6.0:1 on canvas -->
 
-    <!-- ── Braille cell ── -->
-    <color name="braille_on">#FF0E0F12</color>
-    <color name="braille_off">#337A7F8A</color>
 
     <!-- ── Solid canvas ── -->
     <color name="gradient_warm_start">#FFF5F6F8</color>

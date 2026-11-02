@@ -56,9 +56,6 @@
     <color name="tape_outline">#00000000</color>    <!-- light mode adds a 2dp ink edge -->
     <color name="sos_outline">#FFFF5A4D</color>     <!-- 6.2:1 on canvas -->
 
-    <!-- ── Braille cell (state dots) ── -->
-    <color name="braille_on">#FFFFFFFF</color>
-    <color name="braille_off">#38FFFFFF</color>
 
     <!-- ── Solid canvas (gradients banned) ── -->
     <color name="gradient_warm_start">#FF0E0F12</color>

@@ -26,7 +26,7 @@
         android:paddingTop="@dimen/page_margin_top"
         android:paddingBottom="@dimen/space_2xl">
 
-        <!-- Header: greeting + the cell that mirrors the mic -->
+        <!-- Header: greeting -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -63,15 +63,6 @@
                     android:textColor="@color/muted"
                     android:textSize="@dimen/text_body" />
             </LinearLayout>
-
-            <com.example.gabai.ui.BrailleCell
-                android:id="@+id/cell_listening"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_lg"
-                android:layout_marginTop="@dimen/space_sm"
-                app:cellMask="27"
-                app:dotColor="@color/braille_on" />
         </LinearLayout>
 
         <!-- Voice panel -->
@@ -174,7 +165,7 @@
                 <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_nav_title" />
                 <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_nav_desc" />
             </LinearLayout>
-            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="29" app:dotColor="@color/on_tape" />
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_navigation" app:tint="@color/on_tape" />
         </LinearLayout>
 
         <LinearLayout
@@ -187,7 +178,7 @@
                 <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_ocr_title" />
                 <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_ocr_desc" />
             </LinearLayout>
-            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="23" app:dotColor="@color/on_tape" />
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_ocr" app:tint="@color/on_tape" />
         </LinearLayout>
 
         <LinearLayout
@@ -200,7 +191,7 @@
                 <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_color_title" android:textColor="@color/on_tape_amber" />
                 <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_color_desc" android:textColor="@color/on_tape_amber" />
             </LinearLayout>
-            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="9" app:dotColor="@color/on_tape_amber" />
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_color" app:tint="@color/on_tape_amber" />
         </LinearLayout>
 
         <LinearLayout
@@ -213,7 +204,7 @@
                 <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_family_title" />
                 <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_family_desc" />
             </LinearLayout>
-            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="11" app:dotColor="@color/on_tape" />
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_family" app:tint="@color/on_tape" />
         </LinearLayout>
 
         <!-- Settings and accessible navigation: quiet panels, not tape -->
@@ -231,7 +222,7 @@
                 android:textColor="@color/ink"
                 android:textSize="@dimen/text_body_lg"
                 android:textStyle="bold" />
-            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="14" app:dotColor="@color/ink" />
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_settings" app:tint="@color/ink" />
         </LinearLayout>
 
         <TextView
@@ -242,19 +233,19 @@
             android:textColor="@color/ink"
             android:textSize="@dimen/text_body_lg" />
 
-        <!-- ════════ SOS: alone, behind a gap, outline until focused ════════ -->
+        <!-- ════════ SOS: alone behind a gap, solid red tape ════════ -->
         <LinearLayout
             android:id="@+id/btn_sos"
             style="@style/GabAi.Tape"
             android:layout_marginTop="@dimen/sos_gap"
-            android:background="@drawable/bg_sos_outline"
+            android:background="@drawable/bg_tape_sos"
             android:contentDescription="Emergency SOS. Alerts your caregivers after a short countdown you can cancel.">
 
             <LinearLayout style="@style/GabAi.Tape.Labels">
-                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_sos_title" android:textColor="@color/ink" />
-                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_sos_desc" android:textColor="@color/muted" />
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_sos_title" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_sos_desc" />
             </LinearLayout>
-            <com.example.gabai.ui.BrailleCell style="@style/GabAi.Tape.Cell" app:cellMask="63" app:dotColor="@color/sos_outline" />
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_sos" app:tint="@color/on_tape" />
         </LinearLayout>
 
     </LinearLayout>

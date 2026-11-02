@@ -6,7 +6,7 @@ Direction: **Label Tape** (see `.impeccable/surfaces/app-src-main-res-layout-act
 
 Each principle has a test a reviewer can run.
 
-1. **Every state has three channels.** Colour, a braille-cell pattern and a spoken/haptic cue. Test: turn off colour, then the screen, and the state is still known.
+1. **Every state has three channels.** Colour, an icon and word, and a spoken/haptic cue. Test: turn off colour, then the screen, and the state is still known.
 2. **One skeleton, always.** Same regions in the same order on every screen. Test: blindfold swipe-through lands on the same landmarks in each screen.
 3. **SOS is never an accident and never hard.** Isolated by space, reachable in two moves, 5 s countdown with one huge cancel target. Test: nothing within 34 dp of SOS can be mis-hit; SOS reachable from any screen by voice.
 4. **Scale is a material.** Layouts survive 200% font scale with no clipped label. Test: font_scale 2.0 on a 360 dp phone, every label fully visible.
@@ -37,7 +37,7 @@ Keep the 5 tabs (Overview, Map, Camera, Safety, Device). The bottom tab bar stay
 
 ### User skeleton (all user screens)
 ```
-status strip   system-bar inset + listening cell (6-dot braille) + heard phrase
+status strip   system-bar inset + voice-state text + heard phrase
 title          one line, 34 sp bold, spoken on enter
 work area      scrollable; tape strips or live content
 primary action one full-width strip, 92 dp, bottom of work area

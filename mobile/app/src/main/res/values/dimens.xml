@@ -33,14 +33,12 @@
     <dimen name="text_caption">16sp</dimen>
     <dimen name="text_small">14sp</dimen>
 
-    <!-- ── Tape strips and braille cell ── -->
+    <!-- ── Tape strips ── -->
     <dimen name="tape_min_height">92dp</dimen>
     <dimen name="tape_gap">12dp</dimen>
     <dimen name="tape_edge">2dp</dimen>
     <dimen name="sos_gap">34dp</dimen>
     <dimen name="sos_outline_width">4dp</dimen>
-    <dimen name="braille_dot">12dp</dimen>
-    <dimen name="braille_dot_gap">7dp</dimen>
 
     <!-- ── Focus outlines (keyboard / switch access) ── -->
     <dimen name="focus_ring_width">3dp</dimen>
