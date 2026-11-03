@@ -51,12 +51,20 @@ class CaregiverActivity : BaseActivity() {
             window.decorView.postDelayed({ refreshAccessButtons() }, 250)
         }
         optionsColumn = Ui.column(c, 16).apply {
-            addView(alertsBtn, Ui.lp(ctx = c))
+            addView(Ui.button(c, "Connect to someone", Ui.Kind.PRIMARY, "Connect to someone. Scan or type their code, with step by step help. Button.") {
+                startActivity(android.content.Intent(c, com.example.gabai.ConnectActivity::class.java))
+            }, Ui.lp(ctx = c))
+            addView(alertsBtn, Ui.lp(top = 12, ctx = c))
             addView(Ui.button(c, "People I look after", Ui.Kind.SECONDARY, "People I look after. Invite someone or see who has allowed you. Button.") {
                 startActivity(android.content.Intent(c, FamilyActivity::class.java))
             }, Ui.lp(top = 12, ctx = c))
             addView(accessBtn, Ui.lp(top = 12, ctx = c))
             addView(tabsBtn, Ui.lp(top = 12, ctx = c))
+            addView(Ui.button(c, "App settings", Ui.Kind.SECONDARY, "App settings. Text size, contrast, speech and haptics. Button.") {
+                startActivity(android.content.Intent(c, com.example.gabai.SettingsActivity::class.java))
+            }, Ui.lp(top = 12, ctx = c))
+            addView(Ui.button(c, "Reset app (for testing)", Ui.Kind.DANGER, "Reset app for testing. Clears every setting, token and role on this phone. Button.") { confirmReset() },
+                Ui.lp(top = 12, ctx = c))
         }
         val header = Ui.column(c, 16).apply {
             setBackgroundColor(Ui.color(c, R.color.canvas))
@@ -205,6 +213,22 @@ class CaregiverActivity : BaseActivity() {
         SettingsStore.setCaregiverAlertsEnabled(this, on)
         if (on) CaregiverAlertService.start(this) else CaregiverAlertService.stop(this)
         refreshAlertsButton()
+    }
+
+    /** Same wipe as Settings > Reset, plus stopping the background alert service; the app then restarts at the role choice. */
+    private fun confirmReset() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Reset app?")
+            .setMessage("This clears every setting, the relay address, your tokens and your role on this phone. You will start again at the role choice.")
+            .setPositiveButton("Reset") { _, _ ->
+                CaregiverAlertService.stop(this)
+                SettingsStore.resetAll(this)
+                com.example.gabai.services.VisionProfileStore.reset(this)
+                startActivity(android.content.Intent(this, com.example.gabai.MainActivity::class.java))
+                finishAffinity()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun refreshAlertsButton() {

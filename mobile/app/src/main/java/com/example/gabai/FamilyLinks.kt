@@ -28,6 +28,38 @@ class FamilyLinks(
     private var message: String? = null
     val view: View get() = body
 
+    /** Set after every load, for the Connect screen: the user's own handle, and whether the relay could not be reached at all. */
+    var handle: String? = null
+        private set
+    var unreachable = false
+        private set
+    var connected = false
+        private set
+    var onLoaded: (() -> Unit)? = null
+
+    fun retry() { failed = false; refresh() }
+
+    /** Invites [handle]; with a [newRelay] it first switches servers and creates a fresh caregiver profile there. */
+    fun invite(handle: String, newRelay: String?) {
+        Thread {
+            if (newRelay != null) {
+                SettingsStore.setRelayUrl(act, newRelay)
+                SettingsStore.setRelayToken(act, SettingsStore.ROLE_CAREGIVER, "")
+            }
+            var registerError: String? = null
+            if (SettingsStore.getRelayToken(act, SettingsStore.ROLE_CAREGIVER).isBlank()) {
+                val reg = api.register("caregiver", SettingsStore.getCaregiverName(act), null)
+                val token = reg.body?.optString("token").orEmpty()
+                if (reg.ok && token.isNotBlank()) SettingsStore.setRelayToken(act, SettingsStore.ROLE_CAREGIVER, token) else registerError = reg.error
+            }
+            val r = if (registerError == null) api.invite(handle) else null
+            act.runOnUiThread {
+                message = registerError ?: if (r!!.ok) "Invite sent. Ask them to open GabAi and tap Allow." else r.error
+                if (!act.isFinishing && !act.isDestroyed) refresh()
+            }
+        }.start()
+    }
+
     fun refresh() {
         Thread {
             val r = api.links()
@@ -37,6 +69,10 @@ class FamilyLinks(
 
     private fun render(r: Reply) {
         body.removeAllViews()
+        connected = r.ok
+        unreachable = r.error?.startsWith("Cannot reach") == true || message?.startsWith("Cannot reach") == true
+        handle = r.body?.optJSONObject("person")?.optString("handle")?.takeIf { it.isNotBlank() }
+        act.runOnUiThread { onLoaded?.invoke() }
         message?.let { body.addView(Ui.kv(act, "Note", it, Level.WARN), Ui.lp(top = 8, ctx = act)) }
         val json = r.body
         val blank = r.code == 0 && r.error?.startsWith("No relay token") == true
@@ -89,22 +125,7 @@ class FamilyLinks(
         val links = json.getJSONArray("links")
         if (user) {
             body.addView(Ui.kv(act, "Your handle", json.getJSONObject("person").optString("handle")), Ui.lp(top = 8, ctx = act))
-            body.addView(Ui.caption(act, "Give this handle to a caregiver. Nobody sees your location until you allow them."), Ui.lp(top = 4, ctx = act))
-        } else {
-            val handle = Ui.field(act, "Handle of the person you look after", "")
-            body.addView(handle, Ui.lp(top = 8, ctx = act))
-            body.addView(Ui.button(act, "Send invite", Ui.Kind.PRIMARY, "Send an invite to the handle typed above. Button.") {
-                val h = handle.text.toString().trim()
-                if (h.isEmpty()) { handle.error = "Enter a handle"; return@button }
-                Thread {
-                    val r = api.invite(h)
-                    act.runOnUiThread {
-                        message = if (r.ok) "If that handle exists, they have been asked. You will see them below once they allow it."
-                        else r.error
-                        refresh()
-                    }
-                }.start()
-            }, Ui.lp(top = 12, ctx = act))
+            body.addView(Ui.caption(act, "Nobody sees your location until you allow them. To add a caregiver, use Connect."), Ui.lp(top = 4, ctx = act))
         }
         if (links.length() == 0) {
             body.addView(Ui.caption(act, if (user) "No caregivers yet." else "No one has allowed you yet."), Ui.lp(top = 12, ctx = act))

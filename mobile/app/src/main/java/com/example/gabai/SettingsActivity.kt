@@ -321,6 +321,11 @@ class SettingsActivity : BaseActivity() {
             startActivity(Intent(this, OnboardingActivity::class.java))
         }
 
+        findViewById<android.view.View>(R.id.row_tokens_tutorial).setOnClickListener {
+            haptics.click()
+            startActivity(Intent(this, TokensTutorialActivity::class.java))
+        }
+
         findViewById<android.view.View>(R.id.row_mic_source).setOnClickListener {
             haptics.click()
             showMicSourceDialog()

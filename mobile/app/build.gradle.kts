@@ -83,5 +83,7 @@ dependencies {
     implementation("org.java-websocket:Java-WebSocket:1.5.3")
     // Caregiver map (OpenStreetMap tiles, no API key) and the ARCore offline-navigation fallback.
     implementation("org.osmdroid:osmdroid-android:6.1.20")
+    // QR pairing: ZXing core draws the user's code; the embedded scanner reads it on the caregiver's phone.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.ar:core:1.45.0")
 }

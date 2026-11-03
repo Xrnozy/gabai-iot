@@ -142,6 +142,8 @@
     <string name="settings_server_url_desc">Where the vision server runs, e.g. http://192.168.1.5:8080</string>
     <string name="settings_replay_tutorial">Replay the tutorial</string>
     <string name="settings_replay_tutorial_desc">Show the setup screens again</string>
+    <string name="settings_tokens_tutorial">Design tokens tutorial</string>
+    <string name="settings_tokens_tutorial_desc">Three short cards: colour, type, spacing</string>
     <string name="settings_mic_source">Microphone</string>
     <string name="settings_mic_source_desc">Which mic GabAi listens on. Speech still plays through connected headphones</string>
     <string name="settings_camera_source">Camera</string>

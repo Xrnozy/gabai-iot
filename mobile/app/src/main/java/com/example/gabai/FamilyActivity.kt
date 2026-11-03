@@ -54,6 +54,15 @@ class FamilyActivity : BaseActivity() {
         col.addView(Ui.title(c, "Family & safety"), Ui.lp(top = 16, ctx = c))
         col.addView(Ui.caption(c, "Share your location with people you trust. They can see where you are, how the device is doing, and get alerted if you need help."), Ui.lp(top = 4, ctx = c))
 
+        val helper = SettingsStore.getAppRole(c) != SettingsStore.APP_CAREGIVER
+        val connect = Ui.card(c, if (helper) "Connect a caregiver" else "Connect to someone").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
+        connect.addView(Ui.body(c, if (helper) "Show a code to the person who looks after you. Step by step help is on the next screen."
+            else "Scan the code on the other phone, or type it. Step by step help is on the next screen."), Ui.lp(top = 4, ctx = c))
+        connect.addView(Ui.button(c, if (helper) "Show my code" else "Scan or type a code", Ui.Kind.PRIMARY,
+            (if (helper) "Show my code to a caregiver" else "Scan or type a code to connect") + ". Button.") {
+            startActivity(Intent(c, ConnectActivity::class.java))
+        }, Ui.lp(top = 12, ctx = c))
+
         val share = Ui.card(c, "Share my location").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
         status = Ui.column(c)
         share.addView(status, Ui.lp(top = 8, ctx = c))
@@ -69,7 +78,17 @@ class FamilyActivity : BaseActivity() {
         phoneToken = Ui.field(c, "This phone's token", SettingsStore.getRelayToken(c, SettingsStore.ROLE_PHONE), secret = true)
         caregiverToken = Ui.field(c, "Caregiver token (only on a caregiver's phone)", SettingsStore.getRelayToken(c, SettingsStore.ROLE_CAREGIVER), secret = true)
         name = Ui.field(c, "Your name, shown when you acknowledge an alert", SettingsStore.getCaregiverName(c))
-        listOf(url, phoneToken, caregiverToken, name).forEach { conn.addView(it, Ui.lp(top = 12, ctx = c)) }
+        conn.addView(Ui.caption(c, "Nothing to type here. This phone signs up with the relay by itself and keeps its own private key (a token). Use Connect above to link people."), Ui.lp(top = 4, ctx = c))
+        listOf(url, name).forEach { conn.addView(it, Ui.lp(top = 12, ctx = c)) }
+
+        // Tokens fill themselves in; the fields stay only for a relay set up with shared tokens, so they start hidden.
+        val advanced = Ui.column(c).apply { visibility = View.GONE }
+        advanced.addView(Ui.caption(c, "A token is the private key this phone uses to talk to the relay. It is created automatically and filled in below. Only type one if your relay was set up with shared tokens (relay_tokens.json)."), Ui.lp(ctx = c))
+        listOf(phoneToken, caregiverToken).forEach { advanced.addView(it, Ui.lp(top = 12, ctx = c)) }
+        conn.addView(Ui.button(c, "Advanced: tokens", Ui.Kind.SECONDARY, "Show or hide the token fields. Button.") {
+            advanced.visibility = if (advanced.visibility == View.GONE) View.VISIBLE else View.GONE
+        }, Ui.lp(top = 12, ctx = c))
+        conn.addView(advanced, Ui.lp(top = 4, ctx = c))
         conn.addView(Ui.button(c, "Save connection", Ui.Kind.SECONDARY) { saveConnection() }, Ui.lp(top = 16, ctx = c))
 
         val mine = Ui.card(c, "My caregivers").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
@@ -85,7 +104,8 @@ class FamilyActivity : BaseActivity() {
         val openDashboard = Ui.button(c, "Open caregiver dashboard", Ui.Kind.PRIMARY) {
             saveConnection()
             if (SettingsStore.getRelayToken(c, SettingsStore.ROLE_CAREGIVER).isBlank()) {
-                caregiverToken.error = "Enter the caregiver token first"; caregiverToken.requestFocus()
+                android.widget.Toast.makeText(c, "Connect to the relay first. Opening Connect.", android.widget.Toast.LENGTH_LONG).show()
+                startActivity(Intent(c, ConnectActivity::class.java))
             } else startActivity(Intent(c, CaregiverActivity::class.java))
         }
         // Debug builds only: hold the button to preview the dashboard layout with no token and no relay.
@@ -111,6 +131,10 @@ class FamilyActivity : BaseActivity() {
 
     override fun onStart() {
         super.onStart(); LiveState.listen(onChange); renderStatus()
+        // The Connect screen can change the relay and tokens; reload so "Save connection" never writes stale values back.
+        url.setText(SettingsStore.getRelayUrl(this))
+        phoneToken.setText(SettingsStore.getRelayToken(this, SettingsStore.ROLE_PHONE))
+        caregiverToken.setText(SettingsStore.getRelayToken(this, SettingsStore.ROLE_CAREGIVER))
         if (SettingsStore.getAppRole(this) == SettingsStore.APP_CAREGIVER) caregiverLinks.refresh() else userLinks.refresh()
     }
     override fun onStop() { LiveState.unlisten(onChange); super.onStop() }
@@ -130,7 +154,8 @@ class FamilyActivity : BaseActivity() {
             return
         }
         if (SettingsStore.getRelayToken(this, SettingsStore.ROLE_PHONE).isBlank()) {
-            phoneToken.error = "Enter this phone's token first"; phoneToken.requestFocus(); return
+            android.widget.Toast.makeText(this, "This phone is not connected to the relay yet. Opening Connect.", android.widget.Toast.LENGTH_LONG).show()
+            startActivity(Intent(this, ConnectActivity::class.java)); return
         }
         val wanted = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
         if (Build.VERSION.SDK_INT >= 33) wanted += Manifest.permission.POST_NOTIFICATIONS

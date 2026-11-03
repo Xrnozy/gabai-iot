@@ -80,6 +80,8 @@
             android:exported="false" />
 
         <activity android:name=".FamilyActivity" android:exported="false" />
+        <activity android:name=".TokensTutorialActivity" android:exported="false" />
+        <activity android:name=".ConnectActivity" android:exported="false" />
         <activity
             android:name=".safety.EmergencyActivity"
             android:exported="false"

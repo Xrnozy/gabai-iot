@@ -52,7 +52,7 @@ class RoleActivity : BaseActivity() {
         if (n.isEmpty()) { name.error = "Enter your name"; name.requestFocus(); return }
         SettingsStore.setCaregiverName(this, n)
         SettingsStore.setAppRole(this, SettingsStore.APP_CAREGIVER)
-        startActivity(Intent(this, FamilyActivity::class.java))
+        startActivity(Intent(this, ConnectActivity::class.java))
         finish()
     }
 }
