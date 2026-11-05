@@ -36,6 +36,7 @@ class SourceSection:
     max_frames: int = 300
     port: int = 5600                 # live only: where the Pi sender connects
     token: str = "gabai"
+    relay_port: int = 0              # live only: > 0 runs the caregiver relay inside this process on that port, fed by this Pi link (port 5600 has one owner); 0 = no relay here
     calib: str = "data/stereo_calib_new.npz"
     imu_sync: str = "data/imu_sync.json"
     accel_calib: str = "data/accel_calib.json"

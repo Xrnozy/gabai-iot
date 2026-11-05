@@ -8,6 +8,7 @@ import os
 
 import uvicorn
 
+from . import discovery
 from .app import create_app, load_tokens
 from .bridge import PiBridge, Ticker
 from .core import Relay, default_db_path
@@ -16,7 +17,7 @@ from .frames import FrameStore
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--host", default="0.0.0.0", help="bind address; use the Tailscale IP to keep it off the LAN")
+    ap.add_argument("--host", default="0.0.0.0", help="bind address; 0.0.0.0 serves the hotspot")
     ap.add_argument("--port", type=int, default=8090)
     ap.add_argument("--db", default=default_db_path())
     ap.add_argument("--pi-port", type=int, default=5600)
@@ -36,7 +37,9 @@ def main():
         receiver = LiveReceiver(port=a.pi_port, token=a.pi_token)
         receiver.start()
         PiBridge(relay, frames, receiver).start()
+    discovery.serve(a.port)
     print(f"relay on {a.host}:{a.port}; tokens in {tokens_path}")
+    print("phones can reach it at: " + ", ".join(f"http://{ip}:{a.port}" for ip in discovery.lan_addresses()))
     uvicorn.run(create_app(relay, frames, tokens), host=a.host, port=a.port, log_level="warning")
 
 

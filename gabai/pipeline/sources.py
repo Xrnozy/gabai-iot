@@ -283,7 +283,7 @@ class PairPrep:
         if n % 150 == 0 and n and power_warning(health.get("throttled")):
             print("WARNING: " + power_warning(health.get("throttled")), flush=True)
         return Frame(n, int(round(t_capture * 1000)), t, l, r, cal, rows,
-                     {"kind": self.kind, "layout": "swapped" if self.swapped else "as calibrated", "pair_dt_ms": dt, "note": note, "cam_delay_removed_ms": self.delay_s * 1000, "skew_comp": comp,
+                     {"kind": self.kind, "layout": "swapped" if self.swapped else "as calibrated", "pair_dt_ms": dt, "pair_dt_signed_ms": dt_signed, "note": note, "cam_delay_removed_ms": self.delay_s * 1000, "skew_comp": comp,
                       "cam": {k_: health.get(k_) for k_ in ("exposure_ms", "gain", "picture_mean", "exposure_cap_ms")}, "power": power_warning(health.get("throttled"))})
 
 
@@ -301,6 +301,9 @@ def live_source(cfg, rect, delay_s, k=1.0):
     sb = rx.enable_sync(max_groups=cfg.sync.max_groups, max_lag_s=cfg.sync.max_lag_s, keep_lag_s=cfg.sync.keep_lag_s, imu_wait_s=cfg.sync.imu_wait_ms / 1000.0,
                         klt_wait_s=cfg.sync.klt_wait_ms / 1000.0) if cfg.sync.enabled else None
     rx.start()
+    if s.relay_port:
+        from gabai.relay import embed
+        embed.start(rx, port=s.relay_port)
     for line in calibration_banner(s.calib):
         print(line, flush=True)
     prep = PairPrep(cfg, rect, k, delay_s)

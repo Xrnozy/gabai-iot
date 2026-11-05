@@ -131,6 +131,7 @@ def live_frames(port, token, f_frac, baseline, gray=False, gamma=1.0, rectifier=
             yield None  # lets the caller keep its window alive
             continue
         seq = pair.seq
+        LINK["seq"] = seq
         st, h = rx.stats(), rx.stats()["health"]
         LINK["rx"] = rx
         imu_batch = rx.drain_imu()
@@ -360,6 +361,7 @@ def main():
     ap.add_argument("--baseline", type=float, default=0.065, help="video: assumed camera baseline in metres")
     ap.add_argument("--cam-h", type=float, default=None, help="camera height in m, enables floor/drop check")
     ap.add_argument("--model", choices=["s", "m", "l", "h", "ffs", "defom", "prompt"], default="m", help="LAS2 size (needs checkpoints/LAS2_<size>.pth), ffs = Fast-FoundationStereo, defom = DEFOM-Stereo, prompt = PromptStereo")
+    ap.add_argument("--relay-port", type=int, default=0, help="live: also serve the caregiver relay on this port (8090), sharing this process's Pi link; 0 = off")
     ap.add_argument("--no-audio", action="store_true", help="live: do not speak alerts (they are still logged)")
     ap.add_argument("--telemetry-port", type=int, default=8000, help="live: port of the telemetry web page, 0 = off")
     ap.add_argument("--log", default="data/telemetry_log.csv", help="live: per-frame CSV log for the graphs, '' = off")
@@ -440,6 +442,7 @@ def main():
     hooked = False
     writer, n, dropped, paused = None, 0, 0, False
     controller = tel = tlog = None
+    relay_ref = {}
     lr_pass = getattr(las, "disparity_lr_batched", las.disparity_lr)   # one batched call when the model supports it
     mono_model = fuser = smoother = None
     veto_model = None
@@ -592,6 +595,12 @@ def main():
             # capture -> the moment the clip is handed to the sound card (not the sound itself: see docs/phase-M-manual-test.md)
             from gabai.report.metrics import speech_latency_ms
             speech_ms = speech_latency_ms(time.monotonic(), LINK.get("t_recv"), LINK.get("lat")) if said else None
+            if a.relay_port and "relay" not in relay_ref and LINK.get("rx") is not None:     # the Pi link exists once frames flow
+                from gabai.relay.embed import start as start_relay
+                relay_ref["relay"], _ = start_relay(LINK["rx"], a.relay_port)
+            if relay_ref.get("relay") and LINK.get("seq") is not None:
+                from gabai.relay.results import build_result
+                relay_ref["relay"].ingest_nav(build_result(LINK["seq"], time.time(), res.alert, said))
             for ph in said:
                 LINK["spoken"] = ph
                 if tel:

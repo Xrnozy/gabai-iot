@@ -4,6 +4,7 @@ Everything a caregiver sees carries its age. Nothing is called "live" because it
 when the server last HEARD from a device, never from the last status the device reported about itself.
 """
 import hashlib
+import hmac
 import json
 import os
 import secrets
@@ -16,7 +17,7 @@ from .geo import distance_to_route_m, haversine_m
 PHONE_STALE_S = 25            # phone posts every 5-10 s; 2.5 missed cycles = offline
 PI_STALE_S = 6                # Pi frames arrive several times a second
 NAV_STALE_S = 5
-LOCATION_FRESH_S = 30
+LOCATION_FRESH_S = 15        # fixes arrive every 5 s while navigating; 3 missed = outdated
 GOOD_ACC_M, WEAK_ACC_M = 20.0, 50.0
 MAX_ODOMETER_ACC_M = 50.0     # fixes worse than this never add distance
 DEVIATION_M, DEVIATION_FIXES = 30.0, 2
@@ -35,7 +36,11 @@ CREATE TABLE IF NOT EXISTS people(id TEXT PRIMARY KEY, role TEXT, name TEXT, han
 CREATE TABLE IF NOT EXISTS links(id TEXT PRIMARY KEY, user_id TEXT, caregiver_id TEXT, status TEXT, created REAL, responded REAL,
   UNIQUE(user_id, caregiver_id));
 CREATE TABLE IF NOT EXISTS invite_log(caregiver_id TEXT, t REAL);
+CREATE TABLE IF NOT EXISTS access_requests(id TEXT PRIMARY KEY, secret_hash TEXT, name TEXT, code TEXT, ip TEXT, status TEXT, created REAL, token TEXT);
 """
+REQUEST_TTL_S = 120           # a new device waits this long for the primary to answer
+REQUESTS_PER_IP = 3           # open requests per address, so a device cannot flood the primary with prompts
+REQUESTS_OPEN = 5
 INVITE_TTL_S = 7 * 24 * 3600  # a pending invite nobody answered stops being answerable
 INVITES_PER_HOUR = 10
 REGISTRATIONS_PER_HOUR = 30
@@ -261,10 +266,16 @@ class Relay:
         h = str(handle or "").strip().lower()
         return h if 3 <= len(h) <= 40 and all(c.isalnum() or c in "._-@+" for c in h) else None
 
-    def register(self, role, name, handle=None):
+    def register(self, role, name, handle=None, _internal=False):
         """Create a person and return their token once; only its hash is stored."""
         if role not in PERSON_ROLES:
             raise LinkError("role must be 'user' or 'caregiver'")
+        if not _internal:
+            if role == "caregiver":
+                raise LinkError("caregivers join by requesting access, and the primary device approves", 403)
+            with self._lock:
+                if self._db.execute("SELECT 1 FROM people WHERE role='user'").fetchone():
+                    raise LinkError("this system already has a primary device", 409)
         name = str(name or "").strip()[:60]
         if not name:
             raise LinkError("name is required")
@@ -282,8 +293,97 @@ class Relay:
                 raise LinkError("handle already taken", 409)
             pid, token = secrets.token_hex(8), secrets.token_urlsafe(24)
             self._db.execute("INSERT INTO people VALUES(?,?,?,?,?,?)", (pid, role, name, h, self._hash(token), now))
+            if role == "user":                                      # caregivers the PC owner approved before any phone claimed primary
+                self._db.execute("UPDATE links SET user_id=? WHERE user_id=''", (pid,))
             self._db.commit()
         return {"person_id": pid, "token": token, "role": role, "name": name, "handle": h}
+
+    def reset_primary(self):
+        """Forget the primary phone (lost token, reinstalled app) so the next patient phone can claim the slot. Its caregiver links are kept and go to the next primary (register adopts links with user_id='')."""
+        with self._lock:
+            row = self._db.execute("SELECT id FROM people WHERE role='user'").fetchall()
+            for r in row:
+                self._db.execute("UPDATE links SET user_id='' WHERE user_id=?", (r["id"],))
+            self._db.execute("DELETE FROM people WHERE role='user'")
+            self._db.commit()
+        return {"removed": len(row)}
+
+    # ---------- access requests: a new caregiver device asks, the primary device approves ----------
+    def request_access(self, name, ip=""):
+        """Open a request. The returned secret proves the requester later; the code is only for the owner to compare on both screens."""
+        name = str(name or "").strip()[:60]
+        if not name:
+            raise LinkError("name is required")
+        now = self.now()
+        with self._lock:
+            self._expire_requests(now)
+            q = self._db.execute("SELECT COUNT(*) c, SUM(ip=?) m FROM access_requests WHERE status='pending'", (ip,)).fetchone()
+            if (q["m"] or 0) >= REQUESTS_PER_IP or q["c"] >= REQUESTS_OPEN:
+                raise LinkError("too many open requests, try later", 429)
+            rid, secret, code = secrets.token_hex(8), secrets.token_urlsafe(24), f"{secrets.randbelow(10000):04d}"
+            self._db.execute("INSERT INTO access_requests VALUES(?,?,?,?,?,?,?,NULL)", (rid, self._hash(secret), name, code, ip, "pending", now))
+            self._db.commit()
+        return {"request_id": rid, "secret": secret, "code": code, "expires_in": REQUEST_TTL_S}
+
+    def _expire_requests(self, now):
+        self._db.execute("UPDATE access_requests SET status='expired' WHERE status='pending' AND created<?", (now - REQUEST_TTL_S,))
+        self._db.execute("DELETE FROM access_requests WHERE created<?", (now - 3600,))
+
+    def pending_requests(self):
+        now = self.now()
+        with self._lock:
+            self._expire_requests(now)
+            rows = self._db.execute("SELECT id,name,code,created FROM access_requests WHERE status='pending' ORDER BY created").fetchall()
+        return [dict(r) for r in rows]
+
+    def primary_id(self):
+        """The primary phone's id, or '' while nobody has claimed it (the PC owner may still approve a caregiver)."""
+        with self._lock:
+            r = self._db.execute("SELECT id FROM people WHERE role='user' ORDER BY created LIMIT 1").fetchone()
+        return r["id"] if r else ""
+
+    def decide_request(self, user_id, request_id, approve):
+        """Only the primary device (a user person) decides. Approval mints the caregiver and an active link in one step."""
+        now = self.now()
+        with self._lock:
+            self._expire_requests(now)
+            r = self._db.execute("SELECT name FROM access_requests WHERE id=? AND status='pending'", (request_id,)).fetchone()
+            if r is None:
+                raise LinkError("no pending request with that id", 404)
+            if not approve:
+                self._db.execute("UPDATE access_requests SET status='rejected' WHERE id=?", (request_id,))
+                self._db.commit()
+                return {"ok": True, "status": "rejected"}
+        reg = self.register("caregiver", r["name"], _internal=True)
+        with self._lock:
+            self._db.execute("INSERT INTO links VALUES(?,?,?,?,?,?)", (secrets.token_hex(8), user_id, reg["person_id"], "active", now, now))
+            self._db.execute("UPDATE access_requests SET status='approved', token=? WHERE id=?", (reg["token"], request_id))
+            self._db.commit()
+        return {"ok": True, "status": "approved"}
+
+    def poll_request(self, request_id, secret):
+        """The requester's view. The token is handed over once, then erased from the request."""
+        with self._lock:
+            self._expire_requests(self.now())
+            r = self._db.execute("SELECT secret_hash,status,token FROM access_requests WHERE id=?", (request_id,)).fetchone()
+            if r is None or not hmac.compare_digest(r["secret_hash"], self._hash(secret or "")):
+                raise LinkError("unknown request", 404)
+            out = {"status": r["status"]}
+            if r["status"] == "approved" and r["token"]:
+                out["token"] = r["token"]
+                self._db.execute("UPDATE access_requests SET token=NULL WHERE id=?", (request_id,))
+                self._db.commit()
+        return out
+
+    def devices(self):
+        """Who is paired, for the PC owner's admin page. Never includes tokens or hashes."""
+        with self._lock:
+            self._expire(self.now())
+            people = [dict(r) for r in self._db.execute("SELECT role,name,handle,created FROM people ORDER BY created")]
+            links = [dict(r) for r in self._db.execute(
+                "SELECT l.status,l.created,l.responded,u.name AS user,c.name AS caregiver FROM links l "
+                "LEFT JOIN people u ON u.id=l.user_id JOIN people c ON c.id=l.caregiver_id ORDER BY l.created DESC")]
+        return {"people": people, "links": links}
 
     def person_for_token(self, token):
         if not token:
@@ -431,10 +531,37 @@ class Relay:
             active = next((e for e in events if e["kind"] in EMERGENCY_KINDS and e["status"] in ("pending", "confirmed")), None)
             return {
                 "server_time": now, "connections": conns, "location": loc, "navigation": nav, "pi": pi, "phone": ph,
+                "status": self._status(conns, loc, pi, ph, active),
                 "safety": {"active": active, "recent": events},
                 "route": self._route and {"name": self._route["name"], "points": self._route["points"]},
                 "last_known_safe": self._lkg(loc, nav, pi, conns),
             }
+
+    @staticmethod
+    def _status(conns, loc, pi, ph, active):
+        """The one-glance strip: each entry is {state: ok|warn|bad|off, text}. The app only draws it."""
+        def e(state, text):
+            return {"state": state, "text": text}
+        phone_on = conns["phone"]["state"] == "online"
+        pi_on = conns["pi"]["state"] == "online"
+        cam = pi.get("camera") or {}
+        video = (e("off", "No video yet") if not pi.get("available") else
+                 e("ok", "Live") if pi_on and ((cam.get("fps_left") or 0) > 0 or (cam.get("fps_right") or 0) > 0) else
+                 e("bad", "Lost, showing the last picture") if not pi_on else e("warn", "Camera not sending"))
+        gps_state = ph.get("gps_state")
+        if not loc.get("available"):
+            gps = e("off", "GPS off, Navigation not active" if gps_state == "off" else "No location yet")
+        elif loc["stale"]:
+            gps = e("warn", f"GPS off, last known {round(loc['age_s'])} s ago" if gps_state == "off" else f"Outdated, {round(loc['age_s'])} s ago")
+        elif loc["quality"] == "poor":
+            gps = e("warn", f"Poor accuracy, about {round(loc['accuracy_m'])} m")
+        else:
+            gps = e("ok", "Live" if loc["quality"] == "good" else "Live, weak signal")
+        batt = ph.get("battery_pct")
+        battery = e("off", "Unknown") if batt is None else e("bad" if batt < 15 and not ph.get("charging") else "warn" if batt < 30 else "ok",
+                                                          f"{round(batt)}%" + (", charging" if ph.get("charging") else ""))
+        return {"patient": e("ok", "Connected") if phone_on else e("bad", "Phone offline"), "video": video, "gps": gps, "battery": battery,
+                "emergency": e("bad", "Fall" if active["kind"] == "fall" else "SOS") if active else e("ok", "None")}
 
     def _conn_out(self, dev, now):
         seen = self._seen.get(dev)

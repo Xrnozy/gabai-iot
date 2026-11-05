@@ -6,14 +6,25 @@ The Pi camera pair reaches the relay through the existing TCP link (see bridge.p
 import asyncio
 import hmac
 import json
+import os
 import secrets
 import time
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 
-from .core import LinkError
+from .core import LinkError, default_db_path
+from .tiles import Tiles
+
+def _decode_ego(ego):
+    """The egocentric message as sentences, for the admin page. A malformed message shows nothing rather than breaking the page."""
+    try:
+        from gabai.net.lexicon import decode
+        return decode(ego) if isinstance(ego, dict) else []
+    except Exception:
+        return []
+
 
 MAX_BODY = 1_000_000
 BOUNDARY = "gabaiframe"
@@ -37,8 +48,9 @@ def load_tokens(path):
     return tokens
 
 
-def create_app(relay, frames, tokens):
+def create_app(relay, frames, tokens, tiles=None):
     app = FastAPI(title="Gabai caregiver relay")
+    tiles = tiles or Tiles(os.path.join(os.path.dirname(os.path.abspath(default_db_path())), "tiles"))
 
     def role_for(token):
         for role, value in tokens.items():
@@ -109,6 +121,11 @@ def create_app(relay, frames, tokens):
         relay.ingest_nav(data)
         return {"ok": True}
 
+    @app.get("/api/guidance", dependencies=[Depends(need("phone"))])
+    def guidance():
+        """The newest PC result for the patient's phone; `frame_id` lets it ignore one it has already handled."""
+        return relay.snapshot()["navigation"]
+
     @app.get("/api/state", dependencies=[Depends(need("caregiver"))])
     def state(client: str = Query(default="")):
         if client:
@@ -126,6 +143,25 @@ def create_app(relay, frames, tokens):
     @app.post("/api/register")
     async def register(data=Depends(body)):
         return link_call(relay.register, data.get("role"), data.get("name"), data.get("handle"))
+
+    @app.post("/api/access/request")
+    async def access_request(request: Request, data=Depends(body)):
+        ip = request.client.host if request.client else ""
+        return link_call(relay.request_access, data.get("name"), ip)
+
+    @app.get("/api/access/request/{request_id}")
+    def access_poll(request_id: str, secret: str = Query(default="")):
+        return link_call(relay.poll_request, request_id, secret)
+
+    @app.get("/api/access/pending")
+    def access_pending(p=Depends(need_person("user"))):
+        return {"requests": relay.pending_requests()}
+
+    @app.post("/api/access/{request_id}/decide")
+    async def access_decide(request_id: str, data=Depends(body), p=Depends(need_person("user"))):
+        if data.get("approve") not in (True, False):
+            raise HTTPException(400, "approve must be true or false")
+        return link_call(relay.decide_request, p["id"], request_id, data["approve"])
 
     @app.get("/api/links")
     def links(p=Depends(need_person(None))):
@@ -164,6 +200,13 @@ def create_app(relay, frames, tokens):
         relay.clear_route()
         return {"ok": True}
 
+    @app.get("/tiles/{z}/{x}/{y}.png", dependencies=[Depends(need("caregiver"))])
+    async def tile(z: int, x: int, y: int):
+        data = await run_in_threadpool(tiles.get, z, x, y)
+        if data is None:
+            raise HTTPException(404, "tile not cached and not reachable")
+        return Response(data, media_type="image/png", headers={"Cache-Control": "max-age=86400"})
+
     @app.get("/snapshot/{side}.jpg", dependencies=[Depends(need("caregiver"))])
     async def snapshot(side: str):
         if side not in ("left", "right"):
@@ -173,8 +216,7 @@ def create_app(relay, frames, tokens):
             raise HTTPException(404, "no frame received yet")
         return Response(data, media_type="image/jpeg", headers={"X-Frame-Age-S": f"{age:.1f}", "Cache-Control": "no-store"})
 
-    @app.get("/stream/{side}.mjpg", dependencies=[Depends(need("caregiver"))])
-    async def stream(side: str, fps: float = Query(default=6.0, ge=1.0, le=12.0)):
+    def mjpeg(side, fps):
         if side not in ("left", "right"):
             raise HTTPException(404)
 
@@ -194,6 +236,44 @@ def create_app(relay, frames, tokens):
 
         return StreamingResponse(gen(), media_type=f"multipart/x-mixed-replace; boundary={BOUNDARY}",
                                  headers={"Cache-Control": "no-store"})
+
+    @app.get("/stream/{side}.mjpg", dependencies=[Depends(need("caregiver"))])
+    async def stream(side: str, fps: float = Query(default=6.0, ge=1.0, le=12.0)):
+        return mjpeg(side, fps)
+
+    # ---- admin page: for the person at the PC only. No token, so it answers only to a request from this machine. ----
+    def local_only(request: Request):
+        if not request.client or request.client.host not in ("127.0.0.1", "::1"):
+            raise HTTPException(403, "the admin page is only available on the PC running the relay")
+
+    @app.get("/admin", dependencies=[Depends(local_only)], response_class=HTMLResponse)
+    def admin_page():
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "admin.html"), encoding="utf-8") as f:
+            return f.read()
+
+    @app.get("/admin/state", dependencies=[Depends(local_only)])
+    def admin_state():
+        ego = relay.snapshot()["navigation"].get("ego")
+        return {"ego_text": _decode_ego(ego), "snapshot": relay.snapshot(), **relay.devices(), "pending": relay.pending_requests(), "conn_log": relay.conn_log(40),
+                "events": relay.events(30)}
+
+    @app.post("/admin/decide/{request_id}", dependencies=[Depends(local_only)])
+    async def admin_decide(request_id: str, data=Depends(body)):
+        if data.get("approve") not in (True, False):
+            raise HTTPException(400, "approve must be true or false")
+        return link_call(relay.decide_request, relay.primary_id(), request_id, data["approve"])
+
+    @app.get("/admin/tiles/{z}/{x}/{y}.png", dependencies=[Depends(local_only)])
+    async def admin_tile(z: int, x: int, y: int):
+        return await tile(z, x, y)
+
+    @app.post("/admin/reset-primary", dependencies=[Depends(local_only)])
+    def admin_reset_primary():
+        return relay.reset_primary()
+
+    @app.get("/admin/stream/{side}.mjpg", dependencies=[Depends(local_only)])
+    async def admin_stream(side: str):
+        return mjpeg(side, 6.0)
 
     @app.exception_handler(Exception)
     async def boom(_, exc):

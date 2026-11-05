@@ -16,6 +16,7 @@ start = 0.0                      # seconds into the video (video only)
 skip = 2                         # use every Nth frame
 max_frames = 300                 # 0 = the whole sequence
 calib = "data/stereo_calib_charuco_42.npz"   # ChArUco calibration, scale set so the baseline is the measured 42 mm (square 22.29 mm); the 25 mm-square version gave 47.1 mm
+relay_port = 8090                # caregiver relay runs inside this process, fed by the Pi link (stop any separate `python -m gabai.relay`)
 flip180 = true                   # live only: the rig's pictures come out upside down, so both rectified pictures are turned 180 deg (they trade places, the calibration stays valid). --no-flip180 turns it off for one run
 
 [stereo]
