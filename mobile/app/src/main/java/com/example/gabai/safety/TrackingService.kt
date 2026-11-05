@@ -31,8 +31,8 @@ import org.json.JSONObject
 import kotlin.math.sqrt
 
 /**
- * Foreground service for the blind user's phone: GPS every 5 s while moving and 10 s while still, fall detection on the
- * accelerometer, and the uplink that sends it all to the relay. One thread, one timer, batched sensor delivery: it wakes
+ * Foreground service for the blind user's phone: fall detection on the accelerometer always, GPS every 5 s only while
+ * Navigation is open (see [setNavigating]), and the uplink that sends it all to the relay. One thread, one timer, batched sensor delivery: it wakes
  * the CPU as little as the job allows.
  */
 class TrackingService : Service(), LocationListener, SensorEventListener {
@@ -45,9 +45,7 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
     private val detector = FallDetector { c -> Emergency.startFall(this, c) }
     private var gyroDps = Float.NaN
     private var headingDeg: Float? = null
-    private var requestedMs = 0L
     private var lastGpsAt = 0L
-    private var lastMovingAt = System.currentTimeMillis()
     private val rot = FloatArray(9)
     private val remapped = FloatArray(9)
     private val orient = FloatArray(3)
@@ -57,8 +55,7 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
             updateGpsState()
             Uplink.flush(this@TrackingService)
             Uplink.persist()
-            adaptLocationRate()
-            h.postDelayed(this, uplinkIntervalMs())
+            h.postDelayed(this, UPLINK_MS)
         }
     }
 
@@ -78,14 +75,16 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
             stopSelf()
             return START_NOT_STICKY
         }
-        startInForeground()
+        if (!startInForeground()) { stopSelf(); return START_NOT_STICKY }
         LiveState.trackingRunning = true
+        if (intent?.action == ACTION_GPS) { h.post { startLocation() }; return START_STICKY }
         h.removeCallbacksAndMessages(null)
         h.post { startLocation(); registerSensors(); loop.run() }
         return START_STICKY
     }
 
-    private fun startInForeground() {
+    /** false when Android refuses to run us as a foreground service at all; the caller then stops instead of crashing. */
+    private fun startInForeground(): Boolean {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Location sharing", NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 0, Intent(this, FamilyActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
@@ -98,8 +97,13 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
             .setContentIntent(open)
             .addAction(0, "Stop sharing", stop)
             .build()
-        val type = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
-        ServiceCompat.startForeground(this, NOTIF_ID, n, type)
+        // The location type is only allowed with location permission granted and the app on screen (Navigation open). Fall detection
+        // alone runs as a data-sync service, so the service can start at any time and is upgraded when Navigation opens.
+        val location = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
+        val plain = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
+        val wanted = if (LiveState.navigating && hasLocationPermission()) location else plain
+        return runCatching { ServiceCompat.startForeground(this, NOTIF_ID, n, wanted) }.isSuccess ||
+            (wanted != plain && runCatching { ServiceCompat.startForeground(this, NOTIF_ID, n, plain) }.isSuccess)
     }
 
     // ---------- GPS ----------
@@ -109,26 +113,20 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
     @android.annotation.SuppressLint("MissingPermission")
     private fun startLocation() {
         lm.removeUpdates(this)
+        if (!LiveState.navigating) { LiveState.gpsState = "off"; return }      // GPS is a Navigation feature: no fixes, no battery use otherwise
         if (!hasLocationPermission()) { LiveState.gpsState = "denied"; return }
-        val every = if (stationary()) STILL_MS else MOVING_MS
-        requestedMs = every
-        runCatching { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, every, 0f, this, thread.looper) }
+        lastGpsAt = System.currentTimeMillis()                                   // "searching" is judged from now, not from the last trip
+        LiveState.gpsState = "searching"
+        runCatching { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, UPLINK_MS, 0f, this, thread.looper) }
         // The network provider is nearly free and covers the seconds before a GPS fix and indoor gaps.
         runCatching { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, NETWORK_MS, 0f, this, thread.looper) }
+        // Android 12+: the blended provider often gives a position where GPS cannot see the sky.
+        if (Build.VERSION.SDK_INT >= 31) runCatching { lm.requestLocationUpdates(LocationManager.FUSED_PROVIDER, NETWORK_MS, 0f, this, thread.looper) }
     }
-
-    private fun stationary() = System.currentTimeMillis() - lastMovingAt > STILL_AFTER_MS
-
-    private fun adaptLocationRate() {
-        val want = if (stationary()) STILL_MS else MOVING_MS
-        if (want != requestedMs) startLocation()
-    }
-
-    // A caregiver is looking right now: report every 2 s. Nobody watching: 5 s moving, 10 s still.
-    private fun uplinkIntervalMs() = if (LiveState.watchers > 0) WATCHED_MS else if (stationary()) STILL_MS else MOVING_MS
 
     private fun updateGpsState() {
         LiveState.gpsState = when {
+            !LiveState.navigating -> "off"
             !hasLocationPermission() -> "denied"
             !runCatching { lm.isProviderEnabled(LocationManager.GPS_PROVIDER) }.getOrDefault(false) -> "disabled"
             System.currentTimeMillis() - lastGpsAt > NO_FIX_MS -> "searching"
@@ -141,7 +139,6 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
         val isGps = loc.provider == LocationManager.GPS_PROVIDER
         if (isGps) lastGpsAt = now
         else if (now - lastGpsAt < NETWORK_OK_AFTER_MS) return           // GPS is flowing: ignore the coarser fix
-        if (loc.hasSpeed() && loc.speed > MOVING_SPEED) lastMovingAt = now
         LiveState.gpsState = if (loc.hasAccuracy() && loc.accuracy > WEAK_ACC_M) "weak" else "ok"
         val j = JSONObject()
             .put("id", "${loc.time}-${loc.provider}")
@@ -157,7 +154,7 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
 
     @Deprecated("required below API 30")
     override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
-    override fun onProviderEnabled(provider: String) { updateGpsState() }
+    override fun onProviderEnabled(provider: String) { if (LiveState.navigating) startLocation() else updateGpsState() }   // GPS came back: resume by itself
     override fun onProviderDisabled(provider: String) { updateGpsState() }
 
     // ---------- sensors ----------
@@ -205,11 +202,9 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
         const val ACTION_STOP = "com.example.gabai.TRACKING_STOP"
         private const val CHANNEL = "gabai_tracking"
         private const val NOTIF_ID = 4400
-        private const val MOVING_MS = 5_000L
-        private const val STILL_MS = 10_000L
-        private const val WATCHED_MS = 2_000L
+        const val ACTION_GPS = "com.example.gabai.TRACKING_GPS"
+        private const val UPLINK_MS = 5_000L
         private const val NETWORK_MS = 15_000L
-        private const val STILL_AFTER_MS = 60_000L
         private const val NO_FIX_MS = 20_000L
         private const val NETWORK_OK_AFTER_MS = 15_000L
         private const val MOVING_SPEED = 0.5f
@@ -220,6 +215,12 @@ class TrackingService : Service(), LocationListener, SensorEventListener {
         fun start(ctx: Context) {
             SettingsStore.setTrackingEnabled(ctx, true)
             ContextCompat.startForegroundService(ctx, Intent(ctx, TrackingService::class.java))
+        }
+
+        /** Navigation opened or closed: GPS follows it. Safe to call when the service is not running. */
+        fun setNavigating(ctx: Context, on: Boolean) {
+            LiveState.navigating = on
+            if (LiveState.trackingRunning) ctx.startService(Intent(ctx, TrackingService::class.java).setAction(ACTION_GPS))
         }
 
         fun stop(ctx: Context) {

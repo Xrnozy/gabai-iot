@@ -12,6 +12,7 @@ enum class Command {
     STOP,         // stop current mode / go home
     REPEAT,       // repeat the last status line
     HELP,         // speak the command list
+    SOS,          // "help me", "I need help": start the emergency countdown from any screen
 
     // Settings toggles — "voice commands off", "captions on", ...
     SET_VOICE_ON, SET_VOICE_OFF,           // voice commands enabled
@@ -130,6 +131,10 @@ object CommandParser {
         ),
         Command.REPEAT to listOf(
             "say again", "repeat", "again", "pardon",
+        ),
+        Command.SOS to listOf(
+            "i need help", "need help", "help me", "send help", "get help", "call for help", "call help", "please help",
+            "i need emergency", "need emergency", "emergency", "sos", "s o s",
         ),
         Command.HELP to listOf(
             "what can i say", "command list", "commands", "help",
@@ -260,6 +265,7 @@ object CommandParser {
     ): ParseResult {
         val tokens = normalize(raw)
         if (tokens.isEmpty()) return ParseResult.NoMatch
+        if (isEmergency(tokens)) return ParseResult.Parsed(Command.SOS)
 
         val commandText = stripWake(tokens)
         if (commandText != null) {
@@ -319,6 +325,7 @@ object CommandParser {
     ): ParseResult {
         val tokens = normalize(raw)
         if (tokens.isEmpty()) return ParseResult.NoMatch
+        if (isEmergency(tokens)) return ParseResult.Parsed(Command.SOS)
 
         val commandText = stripWake(tokens)
         if (commandText != null) {
@@ -435,6 +442,18 @@ object CommandParser {
             if (containsPhrase(tokens, s)) return cmd
         }
         return null
+    }
+
+    /**
+     * An emergency works from any screen, with or without the wake name, and is never limited by a screen's allowed set.
+     * A multi-word phrase counts anywhere in the utterance ("please, help me now"); a one-word phrase ("emergency", "sos")
+     * only when it is the whole utterance, so ambient talk does not set it off. It only starts the cancelable countdown.
+     */
+    internal fun isEmergency(tokens: List<String>): Boolean {
+        val body = stripWake(tokens) ?: tokens
+        return synonymTable.getValue(Command.SOS).map { it.split(' ') }.any { p ->
+            if (p.size > 1) containsPhrase(body, p) else body == p
+        }
     }
 
     /** True when the matched command's synonym spans every token — used for

@@ -39,8 +39,9 @@ object SettingsStore {
     private const val KEY_CRASH = "crash_note"
 
     /** Fallback server — must stay whitelisted in network_security_config.xml. */
-    const val DEFAULT_SERVER_URL = "http://192.168.100.77:8080"
-    const val DEFAULT_RELAY_URL = "http://100.66.233.67:8090"
+    const val DEFAULT_SERVER_URL = ""
+    /** Blank until [RelayDiscovery] finds the PC on the hotspot or the user types an address. */
+    const val DEFAULT_RELAY_URL = ""
     const val ROLE_PHONE = "phone"
     const val ROLE_CAREGIVER = "caregiver"
     const val APP_USER = "user"
@@ -185,7 +186,8 @@ object SettingsStore {
     fun setRelayToken(c: Context, role: String, token: String) =
         put(c) { putString(KEY_RELAY_TOKEN + role, token.trim()) }
 
-    fun isTrackingEnabled(c: Context) = prefs(c).getBoolean(KEY_TRACKING, false)
+    /** On by default: a blind user should never have to find a switch for safety. Only an explicit "Stop sharing" turns it off. */
+    fun isTrackingEnabled(c: Context) = prefs(c).getBoolean(KEY_TRACKING, true)
     fun setTrackingEnabled(c: Context, on: Boolean) = put(c) { putBoolean(KEY_TRACKING, on) }
 
     fun isCaregiverAlertsEnabled(c: Context) = prefs(c).getBoolean(KEY_CG_ALERTS, false)

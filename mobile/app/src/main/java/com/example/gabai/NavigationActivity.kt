@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.example.gabai.modules.NavigationModule
+import com.example.gabai.safety.Emergency
 import com.example.gabai.services.Command
 import com.example.gabai.services.CommandParser
 import com.example.gabai.services.Haptics
@@ -26,6 +27,8 @@ import com.example.gabai.services.Zone
 import java.util.Locale
 
 class NavigationActivity : BaseActivity() {
+
+    private companion object { const val SOS_HOLD_MS = 1500L }
 
     private lateinit var tts: TtsService
     private lateinit var haptics: Haptics
@@ -143,6 +146,8 @@ class NavigationActivity : BaseActivity() {
             voice.promptForCommand()
         }
 
+        setupSos()
+
         // Back button is now an ImageView
         findViewById<ImageView>(R.id.btn_nav_back).setOnClickListener {
             haptics.click()
@@ -159,15 +164,46 @@ class NavigationActivity : BaseActivity() {
         }
     }
 
+    /** Hold 1.5 s to send; a short tap only explains. TalkBack users double-tap, which asks "Send SOS?" first. The countdown that follows is cancelable. */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun setupSos() {
+        val sos = findViewById<TextView>(R.id.btn_nav_sos)
+        sos.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(getColor(R.color.tape_sos))
+        }
+        val send = Runnable { sos.text = "SOS"; haptics.click(); Emergency.startSos(this) }
+        sos.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> { sos.text = "Hold"; haptics.click(); v.postDelayed(send, SOS_HOLD_MS) }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    sos.text = "SOS"
+                    if (e.eventTime - e.downTime < SOS_HOLD_MS) { v.removeCallbacks(send); tts.speak("Hold the SOS button to send an alert.") }
+                }
+            }
+            true
+        }
+        sos.setOnClickListener {                            // reached only by an accessibility double-tap
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Send SOS?")
+                .setMessage("Your caregivers will be alerted. You can cancel during the countdown.")
+                .setPositiveButton("Send SOS") { _, _ -> Emergency.startSos(this) }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         tts.speak("Navigation mode. Say back to leave.")
+        com.example.gabai.safety.TrackingService.setNavigating(this, true)
         ensurePermissionsAndStart()
         voice.start()
     }
 
     override fun onPause() {
         super.onPause()
+        com.example.gabai.safety.TrackingService.setNavigating(this, false)
         voice.stop()
         module.stop()
     }
@@ -211,18 +247,11 @@ class NavigationActivity : BaseActivity() {
                 tts.speak("Back")
                 finish()
             }
-            Command.READ_TEXT -> {
-                tts.speak("Opening Read text")
-                startActivity(Intent(this, OcrActivity::class.java))
-            }
-            Command.COLOR -> {
-                tts.speak("Opening Color")
-                startActivity(Intent(this, ColorActivity::class.java))
-            }
             Command.SETTINGS -> {
                 tts.speak("Opening Settings")
                 startActivity(Intent(this, SettingsActivity::class.java))
             }
+            Command.SOS -> Emergency.startSos(this)
             Command.NAVIGATION -> tts.speak("You are already navigating")
             Command.REPEAT ->
                 tts.speak(tvStatus.text?.toString().orEmpty().ifBlank {

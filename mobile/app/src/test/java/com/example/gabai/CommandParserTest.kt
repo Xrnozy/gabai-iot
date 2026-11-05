@@ -27,6 +27,17 @@ class CommandParserTest {
     }
 
     @Test
+    fun emergencyPhrasesStartSosWithOrWithoutWakeName() {
+        for (p in listOf("I need help", "help me", "send help", "need emergency", "Gab, help me", "please help me now", "emergency", "SOS")) {
+            assertEquals(p, Command.SOS, parsed(p))
+            assertEquals(p, Command.SOS, parsed(p, wake = false))
+        }
+        assertEquals(Command.HELP, parsed("Gab help"))                       // the command list is still reachable
+        assertEquals(Command.SOS, (CommandParser.parseAfterWake("help me") as? ParseResult.Parsed)?.command)
+        assertEquals(null, parsed("we have an emergency meeting today"))     // a lone keyword inside other talk is ignored
+    }
+
+    @Test
     fun wakeNameVariants() {
         // TTS says "Gabei"; Filipino-accented speech comes out "Gabaey"/"gabey"
         assertEquals(Command.NAVIGATION, parsed("gabei walk"))

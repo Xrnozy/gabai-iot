@@ -44,12 +44,14 @@ class MainActivity : BaseActivity() {
      *  lifecycle methods must not touch the lateinit fields. */
     private var routingToOnboarding = false
 
-    private enum class Mode { NAVIGATION, READ_TEXT, COLOR, SETTINGS }
+    private enum class Mode { NAVIGATION, SETTINGS }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val micGranted = permissions[Manifest.permission.RECORD_AUDIO] == true
+        val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        startSafetyIfReady()
+        if (!SettingsStore.isVoiceCommandsEnabled(this)) return@registerForActivityResult
         if (micGranted) {
             voice.start()
         } else {
@@ -88,8 +90,6 @@ class MainActivity : BaseActivity() {
         VoiceListenerService.ensureStarted(this)
 
         val btnNavigation = findViewById<LinearLayout>(R.id.btn_navigation)
-        val btnOcr = findViewById<LinearLayout>(R.id.btn_ocr)
-        val btnColor = findViewById<LinearLayout>(R.id.btn_color)
         val btnSettings = findViewById<LinearLayout>(R.id.btn_settings)
         val btnFamily = findViewById<LinearLayout>(R.id.btn_family)
         val btnSos = findViewById<LinearLayout>(R.id.btn_sos)
@@ -106,21 +106,11 @@ class MainActivity : BaseActivity() {
             { _, hasFocus, label -> if (hasFocus) tts.speak(label) }
 
         btnNavigation.setOnFocusChangeListener { v, f -> speakOnFocus(v, f, "Navigation") }
-        btnOcr.setOnFocusChangeListener { v, f -> speakOnFocus(v, f, "Read text") }
-        btnColor.setOnFocusChangeListener { v, f -> speakOnFocus(v, f, "Color") }
         btnSettings.setOnFocusChangeListener { v, f -> speakOnFocus(v, f, "Settings") }
 
         btnNavigation.setOnClickListener {
             haptics.click()
             openMode(Mode.NAVIGATION)
-        }
-        btnOcr.setOnClickListener {
-            haptics.click()
-            openMode(Mode.READ_TEXT)
-        }
-        btnColor.setOnClickListener {
-            haptics.click()
-            openMode(Mode.COLOR)
         }
         btnSettings.setOnClickListener {
             haptics.click()
@@ -143,7 +133,7 @@ class MainActivity : BaseActivity() {
         // Staggered entrance — cards rise in sequence, mic button pops last.
         val cards = listOfNotNull(
             findViewById<android.view.View>(R.id.card_voice_status),
-            btnNavigation, btnOcr, btnColor, btnSettings,
+            btnNavigation, btnSettings,
         )
         val d = resources.displayMetrics.density
         cards.forEachIndexed { i, card ->
@@ -259,25 +249,37 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    private fun ensureMicPermissionAndStartListening() {
-        if (!SettingsStore.isVoiceCommandsEnabled(this)) return
-        val micGranted =
-            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED
+    private fun granted(p: String) = ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
 
-        if (micGranted) {
-            voice.start()
-        } else {
-            requestPermissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+    /** Paired phones share location and watch for falls without any switch; this just makes sure the service is running. */
+    private fun safetyWanted() = SettingsStore.isTrackingEnabled(this) &&
+        SettingsStore.getRelayToken(this, SettingsStore.ROLE_PHONE).isNotBlank()
+
+    private fun startSafetyIfReady() {
+        if (safetyWanted() && granted(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            runCatching { com.example.gabai.safety.TrackingService.start(this) }
         }
+    }
+
+    private fun ensureMicPermissionAndStartListening() {
+        // One permission prompt for everything the home screen needs: mic, plus location when sharing is wanted.
+        val missing = buildList {
+            if (SettingsStore.isVoiceCommandsEnabled(this@MainActivity) && !granted(Manifest.permission.RECORD_AUDIO)) add(Manifest.permission.RECORD_AUDIO)
+            if (safetyWanted() && !granted(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                add(Manifest.permission.ACCESS_FINE_LOCATION); add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (android.os.Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        startSafetyIfReady()
+        if (missing.isNotEmpty()) requestPermissionLauncher.launch(missing.toTypedArray())
+        else if (SettingsStore.isVoiceCommandsEnabled(this)) voice.start()
     }
 
     private fun handleCommand(command: Command) {
         when (command) {
             Command.NAVIGATION -> openMode(Mode.NAVIGATION)
-            Command.READ_TEXT -> openMode(Mode.READ_TEXT)
-            Command.COLOR -> openMode(Mode.COLOR)
             Command.SETTINGS -> openMode(Mode.SETTINGS)
+            Command.SOS -> Emergency.startSos(this)
             // "help" replays the same welcome line the one-time intro used.
             Command.HELP -> tts.speak("Welcome. " + CommandParser.HELP_HINT)
             Command.REPEAT -> tts.speak(
@@ -300,14 +302,6 @@ class MainActivity : BaseActivity() {
             Mode.NAVIGATION -> {
                 tts.speak("Opening Navigation")
                 startActivity(Intent(this, NavigationActivity::class.java))
-            }
-            Mode.READ_TEXT -> {
-                tts.speak("Opening Read text")
-                startActivity(Intent(this, OcrActivity::class.java))
-            }
-            Mode.COLOR -> {
-                tts.speak("Opening Color")
-                startActivity(Intent(this, ColorActivity::class.java))
             }
             Mode.SETTINGS -> {
                 tts.speak("Opening Settings")

@@ -153,11 +153,26 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- ════════ SOS: first strip, so it is on screen without scrolling ════════ -->
+        <LinearLayout
+            android:id="@+id/btn_sos"
+            style="@style/GabAi.Tape"
+            android:layout_marginTop="@dimen/space_2xl"
+            android:background="@drawable/bg_tape_sos"
+            android:contentDescription="Emergency SOS. Alerts your caregivers after a short countdown you can cancel.">
+
+            <LinearLayout style="@style/GabAi.Tape.Labels">
+                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_sos_title" />
+                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_sos_desc" />
+            </LinearLayout>
+            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_sos" app:tint="@color/on_tape" />
+        </LinearLayout>
+
         <!-- ════════ MODULE TAPE STRIPS ════════ -->
         <LinearLayout
             android:id="@+id/btn_navigation"
             style="@style/GabAi.Tape"
-            android:layout_marginTop="@dimen/space_2xl"
+            android:layout_marginTop="@dimen/space_lg"
             android:background="@drawable/bg_tape_navigate"
             android:contentDescription="@string/card_nav_title">
 
@@ -166,32 +181,6 @@
                 <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_nav_desc" />
             </LinearLayout>
             <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_navigation" app:tint="@color/on_tape" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/btn_ocr"
-            style="@style/GabAi.Tape"
-            android:background="@drawable/bg_tape_read"
-            android:contentDescription="@string/card_ocr_title">
-
-            <LinearLayout style="@style/GabAi.Tape.Labels">
-                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_ocr_title" />
-                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_ocr_desc" />
-            </LinearLayout>
-            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_ocr" app:tint="@color/on_tape" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/btn_color"
-            style="@style/GabAi.Tape"
-            android:background="@drawable/bg_tape_colour"
-            android:contentDescription="@string/card_color_title">
-
-            <LinearLayout style="@style/GabAi.Tape.Labels">
-                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_color_title" android:textColor="@color/on_tape_amber" />
-                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_color_desc" android:textColor="@color/on_tape_amber" />
-            </LinearLayout>
-            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_color" app:tint="@color/on_tape_amber" />
         </LinearLayout>
 
         <LinearLayout
@@ -232,21 +221,6 @@
             android:text="Accessible navigation: Off"
             android:textColor="@color/ink"
             android:textSize="@dimen/text_body_lg" />
-
-        <!-- ════════ SOS: alone behind a gap, solid red tape ════════ -->
-        <LinearLayout
-            android:id="@+id/btn_sos"
-            style="@style/GabAi.Tape"
-            android:layout_marginTop="@dimen/sos_gap"
-            android:background="@drawable/bg_tape_sos"
-            android:contentDescription="Emergency SOS. Alerts your caregivers after a short countdown you can cancel.">
-
-            <LinearLayout style="@style/GabAi.Tape.Labels">
-                <TextView style="@style/GabAi.Tape.Title" android:text="@string/card_sos_title" />
-                <TextView style="@style/GabAi.Tape.Desc" android:text="@string/card_sos_desc" />
-            </LinearLayout>
-            <ImageView style="@style/GabAi.Tape.Icon" android:src="@drawable/ic_sos" app:tint="@color/on_tape" />
-        </LinearLayout>
 
     </LinearLayout>
 

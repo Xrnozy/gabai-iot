@@ -21,7 +21,7 @@ import com.example.gabai.ui.Level
 import com.example.gabai.ui.Ui
 
 /**
- * Caregiver dashboard: five tabs (overview, map, camera, safety, device) over one shared 2-second poll. The tab bar is
+ * Caregiver dashboard: four tabs (now, map, alerts, details) over one shared 2-second poll. The tab bar is
  * ordinary views with tab semantics, so TalkBack and the app's own accessible navigation both treat it as tabs.
  */
 class CaregiverActivity : BaseActivity() {
@@ -41,7 +41,7 @@ class CaregiverActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         val c = this
         val ack: (String) -> Unit = { id -> acknowledge(id) }
-        tabs = listOf(OverviewTab(c, ::select2, ack), MapTab(c), CameraTab(c), SafetyTab(c, ack), DeviceTab(c))
+        tabs = listOf(OverviewTab(c, ack), MapTab(c), SafetyTab(c, ack), DeviceTab(c))
 
         // Options (background alerts, people, accessibility) live in a sheet, so live data starts at the top of the screen.
         alertsBtn = Ui.button(c, "", Ui.Kind.SECONDARY) { toggleAlerts() }
@@ -63,8 +63,10 @@ class CaregiverActivity : BaseActivity() {
             addView(Ui.button(c, "App settings", Ui.Kind.SECONDARY, "App settings. Text size, contrast, speech and haptics. Button.") {
                 startActivity(android.content.Intent(c, com.example.gabai.SettingsActivity::class.java))
             }, Ui.lp(top = 12, ctx = c))
-            addView(Ui.button(c, "Reset app (for testing)", Ui.Kind.DANGER, "Reset app for testing. Clears every setting, token and role on this phone. Button.") { confirmReset() },
-                Ui.lp(top = 12, ctx = c))
+            if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {       // a test control: never shown in a release build
+                addView(Ui.button(c, "Reset app (for testing)", Ui.Kind.DANGER, "Reset app for testing. Clears every setting, token and role on this phone. Button.") { confirmReset() },
+                    Ui.lp(top = 12, ctx = c))
+            }
         }
         val header = Ui.column(c, 16).apply {
             setBackgroundColor(Ui.color(c, R.color.canvas))
@@ -107,8 +109,6 @@ class CaregiverActivity : BaseActivity() {
             .also { d -> d.setOnDismissListener { (optionsColumn.parent as? android.view.ViewGroup)?.removeView(optionsColumn) } }
             .show()
     }
-
-    private fun select2(id: String) { tabs.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.let(::select) }
 
     /** Public so accessible navigation can open a tab from its focus ring. */
     fun select(index: Int) {
@@ -162,7 +162,7 @@ class CaregiverActivity : BaseActivity() {
         accessBtn.text = "Accessible navigation: ${if (nav) "On" else "Off"}"
         accessBtn.contentDescription = "Accessible navigation is ${if (nav) "on" else "off"}. Tap to hear an item, double tap to open it. Button."
         tabsBtn.text = "Accessible tabs: ${if (tabs) "On" else "Off"}"
-        tabsBtn.contentDescription = "Accessible tab navigation is ${if (tabs) "on" else "off"}. Swipe to move between the five tabs, double tap to open one. Button."
+        tabsBtn.contentDescription = "Accessible tab navigation is ${if (tabs) "on" else "off"}. Swipe to move between the tabs, double tap to open one. Button."
     }
 
     override fun onStart() {

@@ -16,7 +16,7 @@ import com.example.gabai.ui.LiveCard
 import com.example.gabai.ui.Ui
 import org.json.JSONObject
 import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
@@ -48,7 +48,11 @@ class MapTab(private val ctx: Context) : CaregiverTab {
             userAgentValue = ctx.packageName
         }
         map = MapView(ctx).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            // Tiles come from the PC (cached there), so the map works on the hotspot without internet and the public server never sees the phone.
+            val token = SettingsStore.getRelayToken(ctx, SettingsStore.ROLE_CAREGIVER)
+            setTileSource(object : XYTileSource("GabAiPC", 0, 19, 256, ".png", arrayOf(SettingsStore.getRelayUrl(ctx) + "/tiles/")) {
+                override fun getTileURLString(pMapTileIndex: Long) = super.getTileURLString(pMapTileIndex) + "?token=" + token
+            })
             setMultiTouchControls(true)
             controller.setZoom(17.0)
             // Inside a ScrollView the map must keep its own pan and zoom gestures.
@@ -137,41 +141,4 @@ class MapTab(private val ctx: Context) : CaregiverTab {
 
     private fun List<Pair<Double, Double>>.thinned(max: Int = 300): List<Pair<Double, Double>> =
         if (size <= max) this else filterIndexed { i, _ -> i % ((size + max - 1) / max) == 0 }
-}
-
-class CameraTab(private val ctx: Context) : CaregiverTab {
-    override val id = "camera"
-    override val label = "Camera"
-    override val icon = R.drawable.ic_tab_camera
-    override val purpose = "Live left and right camera feeds from the Raspberry Pi."
-
-    private val status = LiveCard(ctx, "What the Raspberry Pi sees")
-    private val leftCam = MjpegView(ctx, "left")
-    private val rightCam = MjpegView(ctx, "right")
-
-    override val view: View = ScrollView(ctx).apply {
-        setBackgroundColor(Ui.color(ctx, R.color.canvas)); isFillViewport = true
-        addView(Ui.column(ctx, 16).apply {
-            addView(status.view, Ui.lp(ctx = ctx))
-            addView(Ui.heading(ctx, "Left camera"), Ui.lp(top = 16, ctx = ctx))
-            addView(leftCam, Ui.lp(top = 8, ctx = ctx))
-            addView(Ui.heading(ctx, "Right camera"), Ui.lp(top = 16, ctx = ctx))
-            addView(rightCam, Ui.lp(top = 8, ctx = ctx))
-            addView(Ui.caption(ctx, "These are the Raspberry Pi's own cameras, relayed over Tailscale. The phone camera is never used here."), Ui.lp(top = 12, ctx = ctx))
-        })
-    }
-
-    override fun onShow() { leftCam.start(); rightCam.start() }
-    override fun onHide() { leftCam.stop(); rightCam.stop() }
-
-    override fun update(s: JSONObject?, link: HubLink) {
-        val pi = s.obj("pi")
-        val state = s.obj("connections").obj("pi")
-        val online = state?.str("state") == "online"
-        status.begin()
-        status.set("Raspberry Pi", if (online) "Connected" else "Offline" + (state.num("offline_since")?.let { " since ${Fmt.clock(it)}" } ?: ""), if (online) Level.OK else Level.BAD)
-        pi.obj("link").num("fps")?.let { if (online) status.set("Stream", "%.1f frames per second".format(it)) }
-        if (!online) status.set("Showing", "Last frame the server received", Level.WARN)
-        status.end()
-    }
 }

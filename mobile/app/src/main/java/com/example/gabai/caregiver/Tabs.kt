@@ -56,41 +56,6 @@ internal object Rows {
         card.end()
     }
 
-    fun navigation(card: LiveCard, s: JSONObject?, detailed: Boolean) {
-        val nav = s.obj("navigation")
-        card.begin()
-        if (nav == null || nav.flag("available") != true) {
-            card.set("Navigation", "No navigation data yet", Level.OFF)
-            card.end(); return
-        }
-        val stale = nav.flag("stale") == true
-        val mode = nav.str("mode")
-        card.set("Mode", when (mode) {
-            "pi" -> "Raspberry Pi navigation"
-            "arcore" -> "ARCore fallback (phone only, limited)"
-            else -> "Unknown" }, when (mode) { "pi" -> Level.OK; "arcore" -> Level.WARN; else -> Level.OFF })
-        card.set("Data", if (stale) "Last known, ${ago(nav.num("age_s"))}" else "Live", if (stale) Level.WARN else Level.OK)
-        nav.str("instruction")?.let { card.set("Instruction", it) }
-        nav.str("direction")?.let { card.set("Direction", it) }
-        nav.num("distance_m")?.let { card.set("Next instruction in", Fmt.metres(it)) }
-        val safe = nav.flag("forward_safe")
-        if (safe != null) card.set("Path ahead", if (safe) "Clear to continue" else "Stop or take care", if (safe) Level.OK else Level.BAD)
-        nav.num("path_confidence")?.let { card.set("Walkable path confidence", Fmt.pct(if (it <= 1.0) it * 100 else it)) }
-        if (detailed) {
-            nav.num("clearance_left_m")?.let { card.set("Clearance on left", Fmt.metres(it)) }
-            nav.num("clearance_right_m")?.let { card.set("Clearance on right", Fmt.metres(it)) }
-            val obs = nav.optJSONArray("obstacles")
-            if (obs == null || obs.length() == 0) card.set("Obstacles", "None reported", Level.OK)
-            else for (i in 0 until minOf(obs.length(), 5)) {
-                val o = obs.getJSONObject(i)
-                val kind = o.str("kind")?.replace('_', ' ')?.replaceFirstChar { it.uppercase() } ?: "Obstacle"
-                val d = o.num("distance_m")?.let { " · ${Fmt.metres(it)}" } ?: ""
-                card.set("Obstacle ${i + 1}", "$kind ${Fmt.zoneWords(o.str("zone"))}$d" + if (o.flag("approaching") == true) " · approaching" else "", Level.WARN)
-            }
-        }
-        card.end()
-    }
-
     fun connections(card: LiveCard, s: JSONObject?, link: HubLink) {
         card.begin()
         val c = s.obj("connections")
@@ -130,11 +95,12 @@ private fun banner(ctx: Context, level: Level, text: String, tv: TextView, solid
     tv.setTextColor(if (solid) Ui.color(ctx, R.color.on_tape) else c)
 }
 
-class OverviewTab(private val ctx: Context, private val open: (String) -> Unit, private val ack: (String) -> Unit) : CaregiverTab {
+/** The home screen: one banner, one status strip, the live picture and what is ahead. Everything else is a tap away. */
+class OverviewTab(private val ctx: Context, private val ack: (String) -> Unit) : CaregiverTab {
     override val id = "overview"
-    override val label = "Overview"
+    override val label = "Now"
     override val icon = R.drawable.ic_tab_overview
-    override val purpose = "Everything at a glance: status, location, navigation and connections."
+    override val purpose = "Status, live camera and what is ahead of them."
 
     private val status = Ui.text(ctx, "Waiting for the first update…", 20f, R.color.ink, bold = true).apply {
         setPadding(Ui.dp(ctx, 16), Ui.dp(ctx, 16), Ui.dp(ctx, 16), Ui.dp(ctx, 16))
@@ -144,23 +110,26 @@ class OverviewTab(private val ctx: Context, private val open: (String) -> Unit, 
         activeId?.let(ack)
     }.apply { visibility = View.GONE }
     private var activeId: String? = null
-    private val loc = LiveCard(ctx, "Location")
-    private val nav = LiveCard(ctx, "Navigation")
-    private val conn = LiveCard(ctx, "Connections")
+    private val strip = LiveCard(ctx, "Status")
+    private val camera = MjpegView(ctx, "left")
+    private val ahead = LiveCard(ctx, "Ahead of them")
 
     override val view = scroll(ctx, page(ctx).apply {
         addView(status, Ui.lp(ctx = ctx))
         addView(ackBtn, Ui.lp(top = 12, ctx = ctx))
-        card(loc); card(nav); card(conn)
-        loc.add(Ui.button(ctx, "Open map", Ui.Kind.SECONDARY, "Open the map tab. Button.") { open("map") })
-        nav.add(Ui.button(ctx, "Open live cameras", Ui.Kind.SECONDARY, "Open the Raspberry Pi camera tab. Button.") { open("camera") })
-        conn.add(Ui.button(ctx, "Open device health", Ui.Kind.SECONDARY, "Open the device health tab. Button.") { open("device") })
+        card(strip)
+        addView(camera, Ui.lp(top = 12, ctx = ctx))
+        card(ahead)
     })
+
+    override fun onShow() = camera.start()
+    override fun onHide() = camera.stop()
+
+    private fun level(state: String?) = when (state) { "ok" -> Level.OK; "warn" -> Level.WARN; "bad" -> Level.BAD; else -> Level.OFF }
 
     override fun update(s: JSONObject?, link: HubLink) {
         val active = s.obj("safety").obj("active")
         val phone = s.obj("connections").obj("phone")?.str("state")
-        val pi = s.obj("connections").obj("pi")?.str("state")
         activeId = active?.takeIf { it.str("status") != "acknowledged" }?.str("id")
         ackBtn.visibility = if (activeId != null) View.VISIBLE else View.GONE
         when {
@@ -170,16 +139,29 @@ class OverviewTab(private val ctx: Context, private val open: (String) -> Unit, 
                 " · ${active.str("status")} · ${Fmt.clock(active.num("t"))}", status, solid = true)
             !link.ok -> banner(ctx, Level.WARN, "This app lost the server. Showing last known information from ${Fmt.clock(link.lastSuccessMs / 1000.0)}.", status)
             phone != "online" -> banner(ctx, Level.WARN, "Phone is offline. Showing last known information.", status)
-            pi != "online" -> banner(ctx, Level.WARN, "Raspberry Pi is offline. The phone may be using the ARCore fallback.", status)
-            else -> banner(ctx, Level.OK, "All good. Everything is connected.", status)
+            else -> banner(ctx, Level.OK, "All good.", status)
         }
-        Rows.location(loc, s); Rows.navigation(nav, s, detailed = false); Rows.connections(conn, s, link)
+        val st = s.obj("status")
+        strip.begin()
+        for ((key, name) in listOf("patient" to "Patient", "video" to "Video", "gps" to "GPS", "battery" to "Battery", "emergency" to "Emergency")) {
+            val e = st.obj(key)
+            strip.set(name, e.str("text") ?: "Unknown", level(e.str("state")))
+        }
+        strip.end()
+        ahead.begin()
+        val n = s.obj("navigation")
+        if (n.flag("available") != true) ahead.set("Path", "No data yet", Level.OFF)
+        else {
+            val stale = n.flag("stale") == true
+            ahead.set("Path", (n.str("summary") ?: n.str("instruction") ?: "No advice") + if (stale) " (old)" else "", if (stale) Level.WARN else Level.OK)
+        }
+        ahead.end()
     }
 }
 
 class SafetyTab(private val ctx: Context, private val ack: (String) -> Unit) : CaregiverTab {
     override val id = "safety"
-    override val label = "Safety"
+    override val label = "Alerts"
     override val icon = R.drawable.ic_tab_safety
     override val purpose = "Emergencies, falls, route deviations and the alert history."
 
@@ -232,7 +214,7 @@ class SafetyTab(private val ctx: Context, private val ack: (String) -> Unit) : C
 
 class DeviceTab(private val ctx: Context) : CaregiverTab {
     override val id = "device"
-    override val label = "Device"
+    override val label = "Details"
     override val icon = R.drawable.ic_tab_device
     override val purpose = "Raspberry Pi and phone health, cameras and connection status."
 
@@ -305,8 +287,6 @@ class DeviceTab(private val ctx: Context) : CaregiverTab {
             phone.set("Motion sensors", "Accelerometer ${if (ph.flag("accelerometer") == true) "yes" else "no"} · gyroscope ${if (ph.flag("gyroscope") == true) "yes" else "no"}",
                 pl(if (ph.flag("accelerometer") == true) Level.OK else Level.BAD))
             phone.set("ARCore", ph.str("arcore") ?: "unknown", Level.OFF)
-            phone.set("Internet", if (ph.flag("internet") == true) "Connected" else "No internet", pl(if (ph.flag("internet") == true) Level.OK else Level.BAD))
-            phone.set("Tailscale", if (ph.flag("tailscale") == true) "Connected" else "Not connected", pl(if (ph.flag("tailscale") == true) Level.OK else Level.BAD))
             phone.set("Background tracking", if (ph.flag("tracking_service") == true) "Running" else "Stopped", pl(if (ph.flag("tracking_service") == true) Level.OK else Level.BAD))
             ph.num("queued")?.let { if (it > 0) phone.set("Waiting to send", "${it.toInt()}", Level.WARN) }
             ph.str("restart_note")?.let { phone.set("Last restart", it, Level.WARN) }

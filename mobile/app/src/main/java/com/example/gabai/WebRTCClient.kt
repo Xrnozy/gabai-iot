@@ -102,9 +102,8 @@ class WebRTCClient(
 
     private fun initPeerConnection() {
 
-        val iceServers = listOf(
-            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
-        )
+        // LAN only: host candidates need no STUN, and there is no internet on the hotspot.
+        val iceServers = emptyList<PeerConnection.IceServer>()
 
         val config = PeerConnection.RTCConfiguration(iceServers).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN

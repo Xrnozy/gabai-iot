@@ -48,6 +48,7 @@ class NavigationModule(
     private val watchdog = object : Runnable {
         override fun run() {
             if (!started.get()) return
+            if (!everConnected && guidance?.reachable == true) onConnected()      // "connected" now means the relay answers
             evaluateFallback()
             reconnectHandler.postDelayed(this, WATCH_MS)
         }
@@ -74,15 +75,16 @@ class NavigationModule(
         // Lazy init: only now load navigation pipeline & connect.
         modelManager.ensureNavigationModelsInitialized()
 
-        val rtc = serverManager.getOrCreateWebRtcClient(mode = "navigation")
-        rtc.navigationListener = this
-        rtc.startCamera()
-        rtc.createOffer()
+        // Guidance comes from the PC through the relay on the hotspot. The old WebRTC /offer server no longer exists, so the phone opens no peer connection.
+        guidance = RelayGuidance(appContext, { text, full -> onNavigationCommand(text, full) }, { lines -> tts.speak(lines.joinToString(" "), interrupt = false) }).also { it.start() }
         reconnectHandler.postDelayed(watchdog, WATCH_MS)
     }
 
+    private var guidance: RelayGuidance? = null
+
     fun stop() {
         if (!started.compareAndSet(true, false)) return
+        guidance?.stop(); guidance = null
         cancelDisconnectWatchdog()
         reconnectHandler.removeCallbacksAndMessages(null)
         pendingReconnect = null
@@ -362,17 +364,13 @@ class NavigationModule(
 
     // ---------- ARCore fallback ----------
 
-    private fun serverReachable(): Boolean = runCatching {
-        val c = java.net.URL(SettingsStore.getServerUrl(appContext)).openConnection() as java.net.HttpURLConnection
-        c.connectTimeout = 2_000; c.readTimeout = 2_000
-        c.responseCode; c.disconnect(); true
-    }.getOrDefault(false)
+    private fun serverReachable(): Boolean = guidance?.reachable == true
 
     private fun piDroppedPerRelay() = LiveState.relayOk && LiveState.piEverOnline && LiveState.piConnected == false
 
     private fun evaluateFallback() {
         val now = SystemClock.elapsedRealtime()
-        val linkDown = pendingReconnect != null || disconnectWatchdog != null || reconnectAttempts > 0
+        val linkDown = guidance?.reachable != true
         val unhealthy = linkDown || piDroppedPerRelay()
         if (!inFallback) {
             if (!unhealthy) { unhealthySince = 0L; return }
@@ -398,7 +396,7 @@ class NavigationModule(
         pendingReconnect = null
         cancelDisconnectWatchdog()
         serverManager.releaseWebRtc()
-        if (fallback.start()) onFallbackChanged?.invoke(true) else { inFallback = false; scheduleReconnect() }
+        if (fallback.start()) onFallbackChanged?.invoke(true) else inFallback = false
     }
 
     private fun exitFallback() {
@@ -407,8 +405,6 @@ class NavigationModule(
         unhealthySince = 0L
         reconnectAttempts = 0
         onFallbackChanged?.invoke(false)
-        // Give ARCore a moment to release the camera before WebRTC takes it back.
-        reconnectHandler.postDelayed({ if (started.get()) reconnect() }, 800)
     }
 
     companion object {

@@ -220,38 +220,6 @@
             android:padding="@dimen/space_2xl"
             android:paddingBottom="112dp">
 
-            <!-- Handle bar -->
-            <View
-                android:layout_width="40dp"
-                android:layout_height="4dp"
-                android:layout_gravity="center_horizontal"
-                android:background="@drawable/bg_confidence_bar" />
-
-            <!-- Voice guidance label -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_xl"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="@dimen/icon_md"
-                    android:layout_height="@dimen/icon_md"
-                    android:src="@drawable/ic_ai_wave"
-                    android:importantForAccessibility="no" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_sm"
-                    android:text="@string/nav_guidance_label"
-                    android:textColor="@color/muted"
-                    android:textSize="@dimen/text_small"
-                    android:fontFamily="@font/atkinson"
-                    android:letterSpacing="0.06" />
-            </LinearLayout>
-
             <!-- Navigation status / instructions -->
             <TextView
                 android:id="@+id/tv_nav_status"
@@ -280,5 +248,24 @@
     </LinearLayout>
 
     <include layout="@layout/view_mic_fab" />
+
+    <!-- SOS: a corner away from the mic, and only a 1.5 s hold sends it (a TalkBack double-tap asks first). -->
+    <TextView
+        android:id="@+id/btn_nav_sos"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"
+        android:text="SOS"
+        android:textColor="@color/on_tape"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:elevation="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:importantForAccessibility="yes"
+        android:contentDescription="Emergency SOS. Press and hold for one and a half seconds, or double tap to confirm." />
 
 </FrameLayout>

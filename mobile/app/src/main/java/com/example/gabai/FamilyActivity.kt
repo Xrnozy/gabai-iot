@@ -71,10 +71,10 @@ class FamilyActivity : BaseActivity() {
         share.addView(Ui.button(c, "Emergency SOS", Ui.Kind.DANGER, "Emergency SOS. Alerts your caregivers after a 5 second countdown you can cancel. Button.") {
             Emergency.startSos(c); Emergency.openScreen()
         }, Ui.lp(top = 12, ctx = c))
-        share.addView(Ui.caption(c, "Falls are detected from this phone's motion sensors. You always get a 20 second countdown to cancel before anyone is alerted."), Ui.lp(top = 12, ctx = c))
+        share.addView(Ui.caption(c, "Sharing and fall detection turn on by themselves once you are connected to a caregiver. You always get a 20 second countdown to cancel before anyone is alerted."), Ui.lp(top = 12, ctx = c))
 
         val conn = Ui.card(c, "Connection").also { col.addView(it, Ui.lp(top = 16, ctx = c)) }
-        url = Ui.field(c, "Relay address, for example http://100.66.233.67:8090", SettingsStore.getRelayUrl(c))
+        url = Ui.field(c, "Relay address, for example http://192.168.137.1:8090", SettingsStore.getRelayUrl(c))
         phoneToken = Ui.field(c, "This phone's token", SettingsStore.getRelayToken(c, SettingsStore.ROLE_PHONE), secret = true)
         caregiverToken = Ui.field(c, "Caregiver token (only on a caregiver's phone)", SettingsStore.getRelayToken(c, SettingsStore.ROLE_CAREGIVER), secret = true)
         name = Ui.field(c, "Your name, shown when you acknowledge an alert", SettingsStore.getCaregiverName(c))
@@ -116,6 +116,12 @@ class FamilyActivity : BaseActivity() {
             }
         }
         cg.addView(openDashboard, Ui.lp(top = 12, ctx = c))
+
+        // Relay address, name and tokens are set up by Connect; nobody needs to see them to be safe.
+        conn.visibility = View.GONE
+        col.addView(Ui.button(c, "Advanced: connection settings", Ui.Kind.SECONDARY, "Show or hide the relay address and name fields. Button.") {
+            conn.visibility = if (conn.visibility == View.GONE) View.VISIBLE else View.GONE
+        }, Ui.lp(top = 16, ctx = c))
 
         // One role per phone: hide what belongs to the other one. Views stay built so renderStatus() never meets an uninitialised field.
         val caregiverPhone = SettingsStore.getAppRole(c) == SettingsStore.APP_CAREGIVER
@@ -172,7 +178,7 @@ class FamilyActivity : BaseActivity() {
         val gps = LiveState.gpsState
         status.addView(Ui.kv(c, "GPS", when (gps) {
             "ok" -> "Good signal"; "weak" -> "Weak signal"; "searching" -> "Searching for signal"
-            "denied" -> "Permission needed"; "disabled" -> "Location is switched off"; else -> "Off" },
+            "denied" -> "Permission needed"; "disabled" -> "Location is switched off"; else -> "Starts with Navigation" },
             when (gps) { "ok" -> Level.OK; "weak", "searching" -> Level.WARN; "denied", "disabled" -> Level.BAD; else -> Level.OFF }))
         val relay = if (!running) null else LiveState.relayOk
         status.addView(Ui.kv(c, "Relay server", when (relay) { true -> "Connected"; false -> LiveState.relayError ?: "Not connected"; null -> "Not used" },

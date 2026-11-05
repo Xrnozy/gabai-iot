@@ -14,8 +14,6 @@ import android.os.BatteryManager
 import androidx.core.content.ContextCompat
 import com.example.gabai.services.SettingsStore
 import org.json.JSONObject
-import java.net.Inet4Address
-import java.net.NetworkInterface
 
 /** The phone-side health report shown on the caregiver Device tab. Every field is a measurement, never a guess. */
 object PhoneTelemetry {
@@ -44,7 +42,6 @@ object PhoneTelemetry {
             .put("gyroscope", sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null)
             .put("arcore", LiveState.arState)
             .put("internet", hasInternet(app))
-            .put("tailscale", tailscaleUp())
             .put("tracking_service", LiveState.trackingRunning)
             .put("relay_rtt_ms", LiveState.relayRttMs)
             .put("queued", Uplink.pending())
@@ -60,10 +57,4 @@ object PhoneTelemetry {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
             caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
-
-    /** Tailscale hands every device an address in 100.64.0.0/10; an interface holding one means the tailnet is up. */
-    private fun tailscaleUp(): Boolean = runCatching {
-        NetworkInterface.getNetworkInterfaces().asSequence().filter { it.isUp }.flatMap { it.inetAddresses.asSequence() }
-            .filterIsInstance<Inet4Address>().any { val b = it.address; (b[0].toInt() and 0xFF) == 100 && (b[1].toInt() and 0xC0) == 64 }
-    }.getOrDefault(false)
 }

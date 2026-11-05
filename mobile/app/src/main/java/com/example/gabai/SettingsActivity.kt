@@ -59,6 +59,7 @@ class SettingsActivity : BaseActivity() {
     private lateinit var btnRateFast: Button
     private lateinit var tvVisionProfileValue: TextView
     private lateinit var tvServerUrlValue: TextView
+    private lateinit var tvRelayIpValue: TextView
     private lateinit var tvMicSourceValue: TextView
     private lateinit var tvCameraSourceValue: TextView
     private lateinit var tvOutputValue: TextView
@@ -90,6 +91,7 @@ class SettingsActivity : BaseActivity() {
         btnRateFast = findViewById(R.id.btn_rate_fast)
         tvVisionProfileValue = findViewById(R.id.tv_vision_profile_value)
         tvServerUrlValue = findViewById(R.id.tv_server_url_value)
+        tvRelayIpValue = findViewById(R.id.tv_relay_ip_value)
         tvMicSourceValue = findViewById(R.id.tv_mic_source_value)
         tvCameraSourceValue = findViewById(R.id.tv_camera_source_value)
         tvOutputValue = findViewById(R.id.tv_output_value)
@@ -315,6 +317,11 @@ class SettingsActivity : BaseActivity() {
             showServerUrlDialog()
         }
 
+        findViewById<android.view.View>(R.id.row_relay_ip).setOnClickListener {
+            haptics.click()
+            showRelayIpDialog()
+        }
+
         findViewById<android.view.View>(R.id.row_replay_tutorial).setOnClickListener {
             haptics.click()
             tts.speak("Replaying the tutorial")
@@ -351,6 +358,15 @@ class SettingsActivity : BaseActivity() {
             startActivity(Intent(this, OnboardingActivity::class.java))
         }
 
+        val caregiverNow = SettingsStore.getAppRole(this) == SettingsStore.APP_CAREGIVER
+        findViewById<android.widget.TextView>(R.id.tv_role_desc).text =
+            if (caregiverNow) "You are a caregiver. Tap to use this phone for navigation help instead."
+            else "You use navigation help. Tap to make this phone a caregiver phone instead."
+        findViewById<android.view.View>(R.id.row_role).setOnClickListener {
+            haptics.click()
+            confirmSwitchRole(caregiverNow)
+        }
+
         findViewById<android.view.View>(R.id.row_reset).setOnClickListener {
             haptics.click()
             confirmReset()
@@ -376,6 +392,30 @@ class SettingsActivity : BaseActivity() {
                     tts.speak("That doesn't look like a server address. Nothing saved.")
                 }
             }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Accepts "192.168.1.5", "192.168.1.5:8090" or a full http:// address; empty goes back to automatic discovery. AutoConnect picks the change up within seconds. */
+    private fun showRelayIpDialog() {
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            setText(SettingsStore.getRelayUrl(this@SettingsActivity))
+            setSingleLine()
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.settings_relay_ip)
+            .setView(input)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val raw = input.text.toString().trim()
+                val url = when {
+                    raw.isEmpty() -> ""
+                    raw.startsWith("http://") || raw.startsWith("https://") -> raw
+                    else -> "http://" + (if (':' in raw) raw else "$raw:8090")
+                }
+                SettingsStore.setRelayUrl(this, url)
+                tvRelayIpValue.text = url.ifEmpty { getString(R.string.settings_relay_ip_desc) }
+                tts.speak(if (url.isEmpty()) "PC address cleared. Finding it automatically." else "PC address saved. Connecting.")            }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
@@ -453,6 +493,30 @@ class SettingsActivity : BaseActivity() {
             .show()
     }
 
+    /** Keeps both roles' tokens: switching back later needs no new pairing. */
+    private fun confirmSwitchRole(caregiverNow: Boolean) {
+        AlertDialog.Builder(this)
+            .setTitle(if (caregiverNow) "Switch to navigation help?" else "Switch to caregiver?")
+            .setMessage(if (caregiverNow) "This phone will show the navigation home screen and share location and fall alerts."
+            else "This phone will show the caregiver dashboard. Location sharing and fall detection on this phone will stop.")
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                if (caregiverNow) {
+                    SettingsStore.setAppRole(this, SettingsStore.APP_USER)
+                    SettingsStore.setTrackingEnabled(this, true)       // leaving the caregiver role must not leave sharing switched off
+                } else {
+                    SettingsStore.setAppRole(this, SettingsStore.APP_CAREGIVER)
+                    com.example.gabai.safety.TrackingService.stop(this)
+                }
+                tts.speak(if (caregiverNow) "Now using navigation help." else "Now a caregiver phone.")
+                tvServerUrlValue.postDelayed({
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finishAffinity()
+                }, 800)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun confirmReset() {
         AlertDialog.Builder(this)
             .setTitle(R.string.settings_reset)
@@ -486,6 +550,7 @@ class SettingsActivity : BaseActivity() {
         tvFontScaleValue.text = "${(fontScale * 100).toInt()}%"
         swTouchExplore.isChecked = SettingsStore.isTouchExploreEnabled(this)
         tvServerUrlValue.text = SettingsStore.getServerUrl(this)
+        tvRelayIpValue.text = SettingsStore.getRelayUrl(this).ifEmpty { getString(R.string.settings_relay_ip_desc) }
         tvMicSourceValue.text =
             "${micSourceLabel(SettingsStore.getMicSource(this))}. " +
             getString(R.string.settings_mic_source_desc)
@@ -531,18 +596,12 @@ class SettingsActivity : BaseActivity() {
                 tts.speak("Back")
                 finish()
             }
-            Command.NAVIGATION -> {
+            Command.NAVIGATION -> if (SettingsStore.getAppRole(this) == SettingsStore.APP_CAREGIVER) tts.speak("That is not part of the caregiver app.") else {
                 tts.speak("Opening Navigation")
                 startActivity(Intent(this, NavigationActivity::class.java))
             }
-            Command.READ_TEXT -> {
-                tts.speak("Opening Read text")
-                startActivity(Intent(this, OcrActivity::class.java))
-            }
-            Command.COLOR -> {
-                tts.speak("Opening Color")
-                startActivity(Intent(this, ColorActivity::class.java))
-            }
+            Command.READ_TEXT, Command.COLOR -> tts.speak("That feature has been removed.")
+            Command.SOS -> com.example.gabai.safety.Emergency.startSos(this)
             Command.SETTINGS -> tts.speak("You are in settings")
             Command.REPEAT -> tts.speak("Settings. " + CommandParser.HELP_HINT)
             Command.HELP -> tts.speak(CommandParser.HELP_HINT)

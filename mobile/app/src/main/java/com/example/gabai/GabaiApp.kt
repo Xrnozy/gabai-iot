@@ -68,9 +68,13 @@ class GabaiApp : Application() {
             com.example.gabai.services.SettingsStore.setCrashNote(this, "App restarted after ${e.javaClass.simpleName} in ${t.name}")
             previous?.uncaughtException(t, e)
         }
-        if (com.example.gabai.services.SettingsStore.isTrackingEnabled(this)) {
+        // Starts by itself once this phone is paired; caregiver phones and unpaired phones have nothing to share.
+        val store = com.example.gabai.services.SettingsStore
+        if (store.getAppRole(this) == store.APP_USER && store.isTrackingEnabled(this) &&
+            store.getRelayToken(this, store.ROLE_PHONE).isNotBlank()) {
             runCatching { com.example.gabai.safety.TrackingService.start(this) }
         }
+        com.example.gabai.services.AutoConnect.start(this)
         var resumedCount = 0
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {

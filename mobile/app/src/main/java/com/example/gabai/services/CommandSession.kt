@@ -132,7 +132,7 @@ class CommandSession(
         // The session classifier wraps the fuzzy matcher: learned phrase
         // and token caches make repeat mishears resolve instantly and
         // consistently for the lifetime of the app.
-        val match = CommandClassifier.match(candidate, config, allowedCommands())
+        val match = CommandClassifier.match(candidate, config, allowedCommands() - Command.SOS)
             ?: return null
         Log.d(TAG, "fuzzy \"$phrase\" -> ${match.command} " +
             "(%.2f via '${match.synonym}')".format(match.score))

@@ -28,6 +28,7 @@ class RelayApi(context: Context, private val role: String) {
     fun ingest(batch: JSONObject) = call("POST", "/api/phone/ingest", batch)
     fun state() = call("GET", "/api/state")
     fun history(sinceEpoch: Double) = call("GET", "/api/history/locations?since=$sinceEpoch&limit=2000")
+    fun guidance() = call("GET", "/api/guidance")
     fun events() = call("GET", "/api/history/events?limit=100")
     fun ack(id: String, who: String) =
         call("POST", "/api/events/${java.net.URLEncoder.encode(id, "UTF-8")}/ack?who=${java.net.URLEncoder.encode(who, "UTF-8")}")
@@ -38,6 +39,13 @@ class RelayApi(context: Context, private val role: String) {
     /** Caregiver links. [register] needs no token: it creates the person this phone then signs in as. */
     fun register(personRole: String, name: String, handle: String?) = call("POST", "/api/register",
         JSONObject().put("role", personRole).put("name", name).apply { if (!handle.isNullOrBlank()) put("handle", handle) }, auth = false)
+    /** Access requests: a new caregiver device asks (no token yet), the primary device approves with the code both screens show. */
+    fun requestAccess(name: String) = call("POST", "/api/access/request", JSONObject().put("name", name), auth = false)
+    fun pollAccess(id: String, secret: String) =
+        call("GET", "/api/access/request/${java.net.URLEncoder.encode(id, "UTF-8")}?secret=${java.net.URLEncoder.encode(secret, "UTF-8")}", auth = false)
+    fun pendingAccess() = call("GET", "/api/access/pending")
+    fun decideAccess(id: String, approve: Boolean) =
+        call("POST", "/api/access/${java.net.URLEncoder.encode(id, "UTF-8")}/decide", JSONObject().put("approve", approve))
     fun links() = call("GET", "/api/links")
     fun invite(handle: String) = call("POST", "/api/links/invite", JSONObject().put("handle", handle))
     fun respond(linkId: String, action: String) = call("POST", "/api/links/${java.net.URLEncoder.encode(linkId, "UTF-8")}/respond", JSONObject().put("action", action))
@@ -47,7 +55,9 @@ class RelayApi(context: Context, private val role: String) {
         val t0 = SystemClock.elapsedRealtime()
         var conn: HttpURLConnection? = null
         return try {
-            if (auth && token().isBlank()) return Reply(0, null, 0, "No relay token set. Add it in Settings.")
+            if (base().isBlank() && !com.example.gabai.services.RelayDiscovery.refresh(app))     // no address yet: look for the PC once before failing
+                return Reply(0, null, 0, "Cannot reach the PC: no address yet. Join the PC hotspot, or type its address under Family > Advanced.")
+            if (auth && token().isBlank()) return Reply(0, null, 0, "No relay token set. This phone is not linked yet: open Connect.")
             conn = (URL(base() + path).openConnection() as HttpURLConnection).apply {
                 requestMethod = method
                 connectTimeout = 4_000

@@ -7,6 +7,7 @@
     <!-- Network permissions for WebRTC signaling -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
     <!-- Microphone for on-device voice commands -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -71,14 +72,6 @@
             android:name=".SettingsActivity"
             android:exported="false" />
 
-        <activity
-            android:name=".OcrActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ColorActivity"
-            android:exported="false" />
-
         <activity android:name=".FamilyActivity" android:exported="false" />
         <activity android:name=".TokensTutorialActivity" android:exported="false" />
         <activity android:name=".ConnectActivity" android:exported="false" />
@@ -102,7 +95,7 @@
         <service
             android:name=".safety.TrackingService"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location|dataSync" />
         <service
             android:name=".caregiver.CaregiverAlertService"
             android:exported="false"

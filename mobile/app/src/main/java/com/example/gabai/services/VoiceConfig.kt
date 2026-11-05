@@ -55,7 +55,9 @@ data class VoiceConfig(
     val enableDenoiser: Boolean = false,
 
     // ---------- models / recognizer ----------
-    val modelFileEn: String = "ggml-base.en-q8_0.bin",
+    /** Whisper Tiny English q5_1 (32 MB): about 3x faster and 2.5x smaller than Base q8 and enough for a short command set.
+     *  For Filipino switch [useEnglishModel] off and bundle [modelFileMultilingual]. */
+    val modelFileEn: String = "ggml-tiny.en-q5_1.bin",
     /** Whisper large-v3-turbo q5_0 (~570 MB): Filipino FLEURS WER ~11% vs
      *  ~26% for Small q5_1 and ~50%+ for Base, which is unusable for Tagalog.
      *  4-8x heavier on CPU/RAM than Small; fall back to
@@ -63,7 +65,7 @@ data class VoiceConfig(
      *  throttles. */
     val modelFileMultilingual: String = "ggml-large-v3-turbo-q5_0.bin",
     /** Set true for the English-only Base model (English commands only). */
-    val useEnglishModel: Boolean = false,
+    val useEnglishModel: Boolean = true,
     /** Explicit ISO-639 code passed to whisper.cpp — never auto-detect
      *  (short clips misdetect as Malay/Indonesian). "tl" keeps English words
      *  in Latin script, so Taglish and plain English both transcribe. */

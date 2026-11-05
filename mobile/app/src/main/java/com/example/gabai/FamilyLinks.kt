@@ -39,27 +39,6 @@ class FamilyLinks(
 
     fun retry() { failed = false; refresh() }
 
-    /** Invites [handle]; with a [newRelay] it first switches servers and creates a fresh caregiver profile there. */
-    fun invite(handle: String, newRelay: String?) {
-        Thread {
-            if (newRelay != null) {
-                SettingsStore.setRelayUrl(act, newRelay)
-                SettingsStore.setRelayToken(act, SettingsStore.ROLE_CAREGIVER, "")
-            }
-            var registerError: String? = null
-            if (SettingsStore.getRelayToken(act, SettingsStore.ROLE_CAREGIVER).isBlank()) {
-                val reg = api.register("caregiver", SettingsStore.getCaregiverName(act), null)
-                val token = reg.body?.optString("token").orEmpty()
-                if (reg.ok && token.isNotBlank()) SettingsStore.setRelayToken(act, SettingsStore.ROLE_CAREGIVER, token) else registerError = reg.error
-            }
-            val r = if (registerError == null) api.invite(handle) else null
-            act.runOnUiThread {
-                message = registerError ?: if (r!!.ok) "Invite sent. Ask them to open GabAi and tap Allow." else r.error
-                if (!act.isFinishing && !act.isDestroyed) refresh()
-            }
-        }.start()
-    }
-
     fun refresh() {
         Thread {
             val r = api.links()
@@ -77,6 +56,7 @@ class FamilyLinks(
         val json = r.body
         val blank = r.code == 0 && r.error?.startsWith("No relay token") == true
         when {
+            blank && !user -> {}                                   // a caregiver gets a token by access request, never by registering
             blank && !failed -> { body.addView(Ui.kv(act, "Setting up", "Creating your profile", Level.OFF), Ui.lp(top = 8, ctx = act)); register() }
             blank -> body.addView(Ui.button(act, "Try again", Ui.Kind.SECONDARY) { failed = false; refresh() }, Ui.lp(top = 12, ctx = act))
             r.code == 401 -> {                                   // a typed-in shared token is in use: replacing it is the user's call

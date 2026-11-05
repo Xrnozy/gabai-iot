@@ -139,6 +139,8 @@
     <string name="caption_empty">Nothing yet</string>
     <string name="settings_section_helper">For helpers</string>
     <string name="settings_server_url">Server address</string>
+    <string name="settings_relay_ip">PC address (caregiver relay)</string>
+    <string name="settings_relay_ip_desc">Type the PC address, e.g. 192.168.1.5. Leave empty to find the PC automatically.</string>
     <string name="settings_server_url_desc">Where the vision server runs, e.g. http://192.168.1.5:8080</string>
     <string name="settings_replay_tutorial">Replay the tutorial</string>
     <string name="settings_replay_tutorial_desc">Show the setup screens again</string>

@@ -21,6 +21,7 @@ object LiveState {
     @Volatile var gpsState = "off"            // off | searching | ok | weak | denied | disabled
     @Volatile var trackingRunning = false
     @Volatile var latestEmergency: JSONObject? = null
+    @Volatile var navigating = false          // Navigation is open: the only time GPS runs
     @Volatile var watchers = 0
     private val listeners = CopyOnWriteArrayList<() -> Unit>()
 

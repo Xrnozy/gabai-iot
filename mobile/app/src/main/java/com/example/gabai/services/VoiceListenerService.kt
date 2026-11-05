@@ -15,11 +15,9 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.example.gabai.ColorActivity
 import com.example.gabai.GabaiApp
 import com.example.gabai.MainActivity
 import com.example.gabai.NavigationActivity
-import com.example.gabai.OcrActivity
 import com.example.gabai.R
 import com.example.gabai.SettingsActivity
 import java.util.Locale
@@ -119,9 +117,8 @@ class VoiceListenerService : Service() {
     private fun execute(command: Command) {
         when (command) {
             Command.NAVIGATION -> openScreen(NavigationActivity::class.java, "Opening Navigation")
-            Command.READ_TEXT -> openScreen(OcrActivity::class.java, "Opening Read text")
-            Command.COLOR -> openScreen(ColorActivity::class.java, "Opening Color")
             Command.SETTINGS -> openScreen(SettingsActivity::class.java, "Opening Settings")
+            Command.SOS -> com.example.gabai.safety.Emergency.startSos(this)
             Command.HELP -> tts.speak(CommandParser.HELP_HINT)
             Command.REPEAT -> tts.speak(CommandParser.HELP_HINT)
             Command.BACK -> tts.speak("Nothing to go back from")
