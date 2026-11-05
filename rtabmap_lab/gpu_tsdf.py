@@ -35,7 +35,7 @@ def _dev():
 
 class GpuVolume:
     def __init__(self, voxel, trunc, max_range, fx, fy, cx, cy, size, fb, sigma_px=0.3, k_trunc=3.0, max_weight=60.0, min_weight=0.1, power=2.0, max_blocks=24000,
-                 max_std=0.12, edge_rel=0.06, min_cos=0.0, free_space=True, fade=True):
+                 max_std=0.12, edge_rel=0.06, min_cos=0.0, free_space=True, fade=True, refine=False):
         self.dev = _dev()
         self.v, self.tmin, self.max_range, self.size, self.fb = voxel, trunc, max_range, size, fb
         self.fx, self.fy, self.cx, self.cy = fx, fy, cx, cy
@@ -54,6 +54,7 @@ class GpuVolume:
         g = torch.arange(B, device=d)
         self.local = torch.stack(torch.meshgrid(g, g, g, indexing="ij"), -1).reshape(-1, 3)      # x slowest: the order of a (B,B,B) block
         self.n_in = 0
+        self.refine_on, self.corrections = refine, []
 
     # -- block hash ------------------------------------------------------------------------------------------------------------------------------
     @staticmethod
@@ -117,6 +118,89 @@ class GpuVolume:
         w = torch.where(ok, wd * wn * cls_mult, torch.zeros_like(d))
         tr = torch.maximum(torch.full_like(d, self.tmin), self.k_trunc * sig)
         return torch.where(ok, d, torch.zeros_like(d)), tr, w
+
+    # -- pose refinement against the volume ---------------------------------------------------------------------------------------------------------
+    def _fetch(self, vox):
+        """(tsdf, weight) of voxel indices (N,3); 0, 0 where no block exists."""
+        blk = torch.div(vox, B, rounding_mode="floor")
+        loc = vox - blk * B
+        sl = self._slots(blk, False)
+        ok = sl >= 0
+        flat = sl.clamp(min=0) * B ** 3 + loc[:, 0] * B * B + loc[:, 1] * B + loc[:, 2]
+        return torch.where(ok, self.tsdf[flat], torch.zeros_like(flat, dtype=torch.float32)), torch.where(ok, self.w[flat], torch.zeros_like(flat, dtype=torch.float32))
+
+    def _sample(self, pw):
+        """Trilinear signed distance (m) and its gradient (unit-ish, towards the camera side) at world points (N,3); ok = all 8 voxels measured and near the surface."""
+        q = pw / self.v - 0.5
+        i0 = torch.floor(q).long()
+        f = q - i0
+        corners = [(a, b, c) for a in (0, 1) for b in (0, 1) for c in (0, 1)]
+        T, W = [], []
+        for a, b, c in corners:
+            t, w = self._fetch(i0 + torch.tensor([a, b, c], device=pw.device))
+            T.append(t), W.append(w)
+        T, W = torch.stack(T, 1), torch.stack(W, 1)
+        ok = (W >= self.min_w).all(1) & (T.abs() < 0.9 * self.tmin).all(1)
+        wx, wy, wz = (torch.stack([1 - f[:, i], f[:, i]], 1) for i in range(3))
+        sdf = torch.zeros(len(q), device=pw.device)
+        g = torch.zeros(len(q), 3, device=pw.device)
+        for k, (a, b, c) in enumerate(corners):
+            sdf += T[:, k] * wx[:, a] * wy[:, b] * wz[:, c]
+            g[:, 0] += T[:, k] * (1 if a else -1) * wy[:, b] * wz[:, c]
+            g[:, 1] += T[:, k] * (1 if b else -1) * wx[:, a] * wz[:, c]
+            g[:, 2] += T[:, k] * (1 if c else -1) * wx[:, a] * wy[:, b]
+        return sdf, g / self.v, ok
+
+    def refine(self, depth_m, T_wc, stride=6, iters=6, max_t=0.06, max_deg=3.0, huber=0.02, min_pts=400):
+        """Moves a new picture's camera pose so its depth lies on the surface already in the volume (KinectFusion-style TSDF registration, Gauss-Newton on the signed distance of the picture's points).
+        Levenberg damping leaves directions the volume does not constrain (one wall: sliding along it) where they were. Returns T_wc unchanged, and says why in self.corrections, when the volume
+        is empty, too few points land on it, the move would exceed max_t / max_deg, or the robust cost did not drop."""
+        import cv2
+        dev = self.dev
+        D, _, WP = self._pixels(torch.as_tensor(depth_m, device=dev, dtype=torch.float32), torch.ones(depth_m.shape, device=dev))
+        vv, uu = torch.nonzero(D[::stride, ::stride] > 0, as_tuple=True)
+        if len(vv) < min_pts or self.n_blocks == 0:
+            self.corrections.append(None)
+            return T_wc
+        vv, uu = vv * stride, uu * stride
+        z, wpx = D[vv, uu], WP[vv, uu]
+        P = torch.stack([(uu - self.cx) / self.fx * z, (vv - self.cy) / self.fy * z, z], -1)
+        T0 = torch.as_tensor(T_wc, device=dev, dtype=torch.float32)
+        R, t = T0[:3, :3].clone(), T0[:3, 3].clone()
+        cost0 = None
+        for _ in range(iters):
+            pw = P @ R.T + t
+            sdf, g, ok = self._sample(pw)
+            if int(ok.sum()) < min_pts:
+                self.corrections.append(None)
+                return T_wc
+            r, n, pwo = sdf[ok], g[ok], pw[ok]
+            n = n / n.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            w = wpx[ok] / wpx[ok].mean() * torch.where(r.abs() <= huber, torch.ones_like(r), huber / r.abs().clamp(min=1e-9))
+            if cost0 is None:
+                cost0 = float((w * r * r).sum() / w.sum())
+            J = torch.cat([torch.cross(pwo, n, dim=-1), n], 1).double()
+            A = J.T @ (w.double()[:, None] * J)
+            b = -J.T @ (w.double() * r.double())
+            A += torch.eye(6, device=dev, dtype=torch.float64) * (1e-3 * A.diagonal().mean() + 1e-9)
+            d = torch.linalg.solve(A, b).cpu().numpy()
+            dR = torch.as_tensor(cv2.Rodrigues(d[:3])[0], device=dev, dtype=torch.float32)
+            R, t = dR @ R, dR @ t + torch.as_tensor(d[3:], device=dev, dtype=torch.float32)
+            if np.linalg.norm(d[:3]) < 1e-4 and np.linalg.norm(d[3:]) < 1e-4:
+                break
+        pw = P @ R.T + t
+        sdf, _, ok = self._sample(pw)
+        w = (wpx / wpx.mean())[ok] * torch.where(sdf[ok].abs() <= huber, torch.ones_like(sdf[ok]), huber / sdf[ok].abs().clamp(min=1e-9))
+        cost1 = float((w * sdf[ok] ** 2).sum() / w.sum()) if int(ok.sum()) >= min_pts else float("inf")
+        dt = float((t - T0[:3, 3]).norm())
+        deg = float(np.degrees(np.linalg.norm(cv2.Rodrigues((R @ T0[:3, :3].T).cpu().numpy().astype(np.float64))[0])))
+        if dt > max_t or deg > max_deg or not cost1 < 0.95 * cost0:
+            self.corrections.append((dt * 1000.0, deg, cost0, cost1, False))
+            return T_wc
+        self.corrections.append((dt * 1000.0, deg, cost0, cost1, True))
+        out = np.eye(4)
+        out[:3, :3], out[:3, 3] = R.cpu().numpy(), t.cpu().numpy()
+        return out
 
     # -- integration ---------------------------------------------------------------------------------------------------------------------------------
     def integrate(self, depth_m, rgb, T_wc, cls_mult=None):
@@ -251,7 +335,10 @@ class GpuTsdfMap(TsdfMap):
     def _integrate_from(self, vol, frame, T_base):
         depth_mm, bgr, cls = frame
         mult = None if cls is None else CLS_LUT[cls]
-        vol.integrate(depth_mm.astype(np.float32) / 1000.0, np.ascontiguousarray(bgr[:, :, ::-1]), T_base @ OPTICAL, mult)
+        depth_m, T_wc = depth_mm.astype(np.float32) / 1000.0, T_base @ OPTICAL
+        if vol.refine_on and vol.n_in > 0:
+            T_wc = vol.refine(depth_m, T_wc)
+        vol.integrate(depth_m, np.ascontiguousarray(bgr[:, :, ::-1]), T_wc, mult)
 
     def _extract(self):
         t0 = time.perf_counter()

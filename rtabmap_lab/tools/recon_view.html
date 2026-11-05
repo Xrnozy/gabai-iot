@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reconstruction comparison</title>
+<style>
+  :root { --bg:#0e1116; --panel:#161b22; --line:#2b323c; --text:#d7dde5; --dim:#8b95a3; --accent:#4aa3ff; --good:#3fb950; --bad:#f0883e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.45 system-ui, sans-serif; display:flex; height:100vh; overflow:hidden; }
+  #view { flex:1; position:relative; min-width:0; }
+  #side { width:420px; max-width:45vw; background:var(--panel); border-left:1px solid var(--line); overflow:auto; padding:12px 14px; }
+  h1 { font-size:15px; margin:0 0 4px; } h2 { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--dim); margin:16px 0 6px; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; }
+  button { background:#21262d; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 10px; font:inherit; cursor:pointer; }
+  button.on { background:var(--accent); border-color:var(--accent); color:#06121f; font-weight:600; }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  label { display:inline-flex; gap:6px; align-items:center; margin-right:12px; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td, th { padding:3px 4px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  td:first-child, th:first-child { text-align:left; }
+  tr.cur td { background:#1f2a37; }
+  .best { color:var(--good); font-weight:600; }
+  .dim { color:var(--dim); font-size:12px; }
+  #hud { position:absolute; left:10px; top:10px; background:rgba(14,17,22,.8); border:1px solid var(--line); border-radius:6px; padding:6px 10px; pointer-events:none; }
+  input[type=range] { width:100%; }
+  @media (max-width: 760px) { body { flex-direction:column; height:auto; overflow:auto; } #view { height:60vh; flex:none; } #side { width:auto; max-width:none; border-left:0; border-top:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<div id="view"><div id="hud">loading…</div></div>
+<div id="side">
+  <h1>Reconstruction comparison</h1>
+  <div class="dim">Every method was built from the same nodes (depth, picture, RTAB-Map pose). Held-out cameras (orange) were not fused; the scores compare each surface with what those pictures measured.</div>
+  <h2>Method</h2>
+  <div class="btns" id="methods"></div>
+  <h2>Show</h2>
+  <div>
+    <label><input type="checkbox" id="cColour" checked> picture colours (off: grey, shows the shape)</label>
+    <label><input type="checkbox" id="cBounds"> plane boundaries</label>
+    <label><input type="checkbox" id="cPath" checked> camera path</label>
+    <label><input type="checkbox" id="cHeld" checked> held-out cameras</label>
+  </div>
+  <h2>Camera <span id="camLabel" class="dim"></span></h2>
+  <input type="range" id="camSlider" min="0" max="0" value="0" aria-label="camera along the path">
+  <div class="btns" style="margin-top:6px"><button id="bLook">view from this camera</button><button id="bFit">fit view</button></div>
+  <h2>Scores (lower error is better)</h2>
+  <table id="scores"></table>
+  <div class="dim" style="margin-top:6px">error = median disparity difference (px) between the surface and held-out pictures; walls = the same on their flat parts; coverage = share of their measured pixels the surface explains; roughness = distance of a vertex from the plane of its 5 cm neighbours (mm).</div>
+  <h2>Room geometry (from the planes)</h2>
+  <div id="room" class="dim"></div>
+</div>
+<script src="three.min.js"></script>
+<script src="OrbitControls.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const host = $("view");
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+host.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0e1116);
+const cam = new THREE.PerspectiveCamera(60, 1, 0.02, 100);
+const controls = new THREE.OrbitControls(cam, renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(2, -3, -4); scene.add(sun);
+scene.add(new THREE.GridHelper(10, 50, 0x2b323c, 0x1c222a));
+let data, cache = {}, current = null, shown = null;
+const pathLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color:0xffc800})); scene.add(pathLine);
+const heldPts = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({color:0xf0883e, size:0.04})); scene.add(heldPts);
+const bounds = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color:0x3fb950})); bounds.visible = false; scene.add(bounds);
+const frus = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color:0x4aa3ff})); scene.add(frus);
+
+function resize(){ const w = host.clientWidth, h = host.clientHeight; renderer.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+window.addEventListener("resize", resize); resize();
+
+async function load(name){
+  if (cache[name]) return cache[name];
+  const m = data.methods[name];
+  const buf = await (await fetch(m.file)).arrayBuffer();
+  const [nv, nt] = new Uint32Array(buf, 0, 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(buf, 8, nv * 3), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(new Uint8Array(buf, 8 + nv * 12, nv * 3), 3, true));
+  let obj;
+  if (nt > 0) {
+    const off = 8 + nv * 12 + Math.ceil(nv * 3 / 4) * 4;
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(buf, off, nt * 3), 1));
+    g.computeVertexNormals();
+    obj = new THREE.Mesh(g, new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.9, metalness:0, side:THREE.DoubleSide}));
+  } else {
+    obj = new THREE.Points(g, new THREE.PointsMaterial({vertexColors:true, size:0.012}));
+  }
+  obj.userData = {nv, nt};
+  return (cache[name] = obj);
+}
+
+function applyColour(){
+  if (!shown) return;
+  const on = $("cColour").checked, mat = shown.material;
+  mat.vertexColors = on; mat.color = new THREE.Color(on ? 0xffffff : 0xb8c0cc); mat.needsUpdate = true;
+}
+
+async function show(name){
+  current = name;
+  document.querySelectorAll("#methods button").forEach(b => b.classList.toggle("on", b.dataset.m === name));
+  $("hud").textContent = "loading " + name + "…";
+  const obj = await load(name);
+  if (current !== name) return;
+  if (shown) scene.remove(shown);
+  shown = obj; scene.add(obj); applyColour();
+  const u = obj.userData;
+  $("hud").textContent = name + " · " + (u.nt ? u.nt.toLocaleString() + " triangles" : u.nv.toLocaleString() + " points");
+  renderScores();
+}
+
+function renderScores(){
+  const M = data.methods, names = Object.keys(M);
+  const cols = [["error px","err_px"],["walls px","walls_err_px"],["coverage","coverage"],["rough mm","roughness_mm"],["spiky","spiky"],["s","seconds"],["MB","MB"]];
+  const best = {}; for (const [,k] of cols) { const v = names.map(n => M[n][k]).filter(x => x != null && isFinite(x)); best[k] = k === "coverage" ? Math.max(...v) : Math.min(...v); }
+  let h = "<tr><th>method</th>" + cols.map(c => `<th>${c[0]}</th>`).join("") + "</tr>";
+  for (const n of names) {
+    h += `<tr class="${n === current ? "cur" : ""}"><td>${n}</td>` + cols.map(([,k]) => { const v = M[n][k]; return `<td class="${v === best[k] && ["err_px","walls_err_px","coverage"].includes(k) ? "best" : ""}">${v == null ? "–" : (+v).toFixed(k === "coverage" || k === "spiky" ? 2 : 1)}</td>`; }).join("") + "</tr>";
+  }
+  $("scores").innerHTML = h;
+}
+
+function setCamera(k){
+  const c = data.cameras[k], T = c.T;
+  $("camLabel").textContent = `node ${c.id} (${k + 1} of ${data.cameras.length})${c.held_out ? " · held out" : ""}`;
+  const s = 0.12, w = 0.16, hh = 0.09;
+  const pts = [[0,0,0],[-w,-hh,s],[w,-hh,s],[w,hh,s],[-w,hh,s]].map(p => [0,1,2].map(r => T[r][0]*p[0] + T[r][1]*p[1] + T[r][2]*p[2] + T[r][3]));
+  const e = [[0,1],[0,2],[0,3],[0,4],[1,2],[2,3],[3,4],[4,1]].flatMap(([a,b]) => [...pts[a], ...pts[b]]);
+  frus.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(e), 3));
+  frus.geometry.computeBoundingSphere();
+}
+
+function lookFromCamera(){
+  const T = data.cameras[+$("camSlider").value].T;
+  cam.position.set(T[0][3], T[1][3], T[2][3]);
+  const fwd = new THREE.Vector3(T[0][2], T[1][2], T[2][2]), up = new THREE.Vector3(-T[0][1], -T[1][1], -T[2][1]);
+  cam.up.copy(up); controls.target.copy(cam.position.clone().add(fwd.multiplyScalar(1.5))); controls.update();
+}
+
+function fit(){
+  const P = data.cameras.map(c => new THREE.Vector3(c.T[0][3], c.T[1][3], c.T[2][3]));
+  const box = new THREE.Box3().setFromPoints(P), c = box.getCenter(new THREE.Vector3());
+  const T = data.cameras[0].T;
+  cam.up.set(-T[0][1], -T[1][1], -T[2][1]);
+  cam.position.copy(c).add(new THREE.Vector3(-T[0][2], -T[1][2], -T[2][2]).multiplyScalar(4).add(cam.up.clone().multiplyScalar(2.5)));
+  controls.target.copy(c); controls.update();
+}
+
+(async () => {
+  data = await (await fetch("scores.json")).json();
+  const names = Object.keys(data.methods);
+  $("methods").innerHTML = names.map(n => `<button data-m="${n}">${n}</button>`).join("");
+  document.querySelectorAll("#methods button").forEach(b => b.onclick = () => show(b.dataset.m));
+  const all = data.cameras.flatMap(c => [c.T[0][3], c.T[1][3], c.T[2][3]]);
+  pathLine.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(all), 3));
+  heldPts.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(data.cameras.filter(c => c.held_out).flatMap(c => [c.T[0][3], c.T[1][3], c.T[2][3]])), 3));
+  const segs = (data.boundaries || []).flatMap(b => b.flatMap((p, i) => [...p, ...b[(i + 1) % b.length]]));
+  bounds.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(segs), 3));
+  $("room").innerHTML = (data.room && data.room.length ? data.room.map(l => `<div>${l.trim()}</div>`).join("") : "no plane pairs") + (data.planes ? `<div style="margin-top:6px">${data.planes.length} planes found</div>` : "");
+  const sl = $("camSlider"); sl.max = data.cameras.length - 1; sl.oninput = () => setCamera(+sl.value); setCamera(0);
+  $("bLook").onclick = lookFromCamera; $("bFit").onclick = fit;
+  $("cColour").onchange = applyColour;
+  $("cBounds").onchange = e => bounds.visible = e.target.checked;
+  $("cPath").onchange = e => pathLine.visible = e.target.checked;
+  $("cHeld").onchange = e => heldPts.visible = e.target.checked;
+  fit();
+  show(names.includes("tsdf") ? "tsdf" : names[0]);
+})();
+(function animate(){ requestAnimationFrame(animate); renderer.render(scene, cam); })();
+</script>
+</body>
+</html>

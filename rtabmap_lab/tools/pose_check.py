@@ -12,6 +12,9 @@ import numpy as np
 from rtabmap_lab.tsdf import OPTICAL
 
 
+SIGMA_PX = 0.5
+
+
 def consistency(nodes, cal, max_pairs=300, stride=8, max_dist=0.5):
     """nodes: {id: (depth_mm, pose 4x4 base)}. Returns dict with the median relative depth difference of pairs of overlapping nodes, the depth noise expected, and per-pair values."""
     ids = sorted(nodes)
@@ -49,7 +52,7 @@ def consistency(nodes, cal, max_pairs=300, stride=8, max_dist=0.5):
             continue
         r = np.median(dz[near] / z[ok][near])
         rel.append(r)
-        noise.append(np.median(np.sqrt(2) * z[ok][near] ** 2 * 0.25 / fB / z[ok][near]))      # two pictures, each about 0.25 px of disparity noise, relative to the depth
+        noise.append(0.6745 * np.median(np.sqrt(2) * z[ok][near] * SIGMA_PX / fB))              # median |difference| of two pictures, each with SIGMA_PX of disparity noise (0.5 px measured, tools/stereo_stages.py), relative to the depth
         per.append((a, b, float(r)))
     return {"pairs": len(rel), "median_rel": float(np.median(rel)) if rel else np.nan, "p90_rel": float(np.percentile(rel, 90)) if rel else np.nan,
             "expected_rel_from_depth_noise": float(np.median(noise)) if noise else np.nan, "per_pair": per}
@@ -58,10 +61,11 @@ def consistency(nodes, cal, max_pairs=300, stride=8, max_dist=0.5):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("path")
+    ap.add_argument("--calib", help="the calibration the nodes were made with (default: source.calib of config/pipeline.toml, which is the WRONG one for a run made with another file)")
     a = ap.parse_args(argv)
     from gabai.pipeline.config import PipelineConfig
     from gabai.tools.calibrate_stereo import Rectifier
-    rect = Rectifier(PipelineConfig.load("config/pipeline.toml").source.calib)
+    rect = Rectifier(a.calib or PipelineConfig.load("config/pipeline.toml").source.calib)
     cal = {"f": rect.f, "B": rect.B, "cx": rect.cx, "cy": rect.cy}
     if a.path.endswith(".npz"):
         z = np.load(a.path)

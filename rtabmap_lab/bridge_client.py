@@ -93,14 +93,16 @@ class Bridge:
     def init(self, fx, fy, cx, cy, baseline, w, h, stride=4, min_range=0.3, max_range=6.0, disp_every=3, lost_reset=15, max_depth_std=0.08):
         self._send(INIT, struct.pack("<5d2ii2f2if", fx, fy, cx, cy, baseline, w, h, stride, min_range, max_range, disp_every, lost_reset, max_depth_std))
 
-    def send_frame(self, frame_id, stamp, left_bgr, right_gray):
-        """True if sent; False when the bridge is still working on the previous frame (the caller skips this one)."""
+    def send_frame(self, frame_id, stamp, left_bgr, right_gray, gyro=None):
+        """True if sent; False when the bridge is still working on the previous frame (the caller skips this one).
+        gyro: the camera's rotation since the previous SENT frame (rotation vector, rad, optical frame), from an IMU; the bridge uses it to bridge lost odometry."""
         if self.busy or not self.alive:
             self.skipped += 1
             return False
         self.busy = True
         self.sent += 1
-        self._send(FRAME, struct.pack("<id", frame_id, stamp) + np.ascontiguousarray(left_bgr).tobytes() + np.ascontiguousarray(right_gray).tobytes())
+        tail = b"" if gyro is None else struct.pack("<3d", *gyro)
+        self._send(FRAME, struct.pack("<id", frame_id, stamp) + np.ascontiguousarray(left_bgr).tobytes() + np.ascontiguousarray(right_gray).tobytes() + tail)
         return True
 
     def poll(self):

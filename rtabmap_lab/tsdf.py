@@ -8,6 +8,8 @@ Frames: pose = RTAB-Map base frame (x forward, y left, z up); the camera is the 
 the inverse of  T_world_base @ OPTICAL.
 """
 import threading
+
+import cv2
 import time
 
 import numpy as np
@@ -24,12 +26,15 @@ def _moved(a, b):
 
 
 class TsdfMap:
-    def __init__(self, intrinsics, size, voxel=0.02, trunc=0.08, max_range=6.0, max_nodes=600, mesh_every_s=2.0, on_mesh=None, threaded=True):
+    def __init__(self, intrinsics, size, voxel=0.02, trunc=0.08, max_range=6.0, max_nodes=600, mesh_every_s=2.0, on_mesh=None, threaded=True, blur_keep=0.75):
         """intrinsics = (fx, fy, cx, cy), size = (w, h). voxel / trunc in metres (trunc: at least 3 to 4 voxels and about the depth noise at the working range).
-        on_mesh(mesh, stats) is called from the worker thread with every finished mesh."""
+        on_mesh(mesh, stats) is called from the worker thread with every finished mesh.
+        blur_keep: a node's depth is fused only if its picture is at least as sharp (variance of the Laplacian) as the sharpest blur_keep share of the last 60 nodes; 1.0 = fuse all.
+        Blurred pairs have noisier disparity (walk_20261102: 1.21 px against 0.89 px for the sharpest quarter); skipping the blurriest quarter: held-out error 3.72 -> 3.41 px (docs/stereo-depth-diagnosis.md)."""
         self.K = o3d.camera.PinholeCameraIntrinsic(size[0], size[1], *intrinsics)
         self.voxel, self.trunc, self.max_range, self.max_nodes, self.mesh_every, self.on_mesh = voxel, trunc, max_range, max_nodes, mesh_every_s, on_mesh
         self.frames = {}                                  # node id -> (depth uint16 mm, bgr)
+        self.blur_keep, self.sharp, self.blurred = blur_keep, {}, set()
         self.poses, self.used = {}, {}                    # latest optimised base pose; the pose each node was integrated with
         self.vol, self.mesh, self.stats = self._new_volume(), None, {"rebuilds": 0, "integrated": 0, "mesh_ms": 0.0, "integrate_ms": 0.0, "vertices": 0, "triangles": 0}
         self._lock, self._step_lock, self._wake, self._stop, self._last_mesh = threading.RLock(), threading.Lock(), threading.Event(), False, 0.0
@@ -44,6 +49,13 @@ class TsdfMap:
     def add_node(self, node_id, depth_mm, bgr, cls=None, conf=None):
         """cls: optional per-pixel class of the fused depth (1 measured and agreed, 2 measured by one source, 3 estimated): the TSDF adds a pixel that many times (3, 2, 1), which is its weight in the average."""
         with self._lock:
+            if self.blur_keep < 1.0:
+                g = bgr if bgr.ndim == 2 else cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+                s = float(cv2.Laplacian(g, cv2.CV_32F).var())
+                recent = [self.sharp[k] for k in sorted(self.sharp)[-60:]]
+                if len(recent) >= 10 and s < np.quantile(recent, 1.0 - self.blur_keep):
+                    self.blurred.add(node_id)
+                self.sharp[node_id] = s
             self.frames[node_id] = (depth_mm, bgr, cls)
             while len(self.frames) > self.max_nodes:         # a very long session: the oldest nodes drop out of the volume (the next rebuild)
                 old = min(self.frames)
@@ -68,7 +80,7 @@ class TsdfMap:
 
     def _step(self, force_mesh):
         with self._lock:
-            todo = {i: self.poses[i].copy() for i in self.frames if i in self.poses}
+            todo = {i: self.poses[i].copy() for i in self.frames if i in self.poses and i not in self.blurred}
             stale = any(i in self.used and _moved(self.used[i], T) for i, T in todo.items()) or any(i not in todo for i in self.used)
             new = [i for i in todo if i not in self.used]
             frames = {i: self.frames[i] for i in todo}

@@ -3,6 +3,7 @@
   setup                 download the OpenCV 4.7.0 / Eigen headers, make import libraries from the installed RTAB-Map, build rtabmap_bridge.exe (once)
   live [options]        RTAB-Map on the Pi's stereo stream, dashboard in Rerun
   replay --folder DIR   the same on a recording made by gabai.tools.record_pairs
+  calib-lab [options]   the calibration lab: edit the stereo calibration while RTAB-Map replays a recording (rtabmap_lab/calib_lab, docs/calibration-lab.md)
   export DB             write the map in DB as a point cloud (.ply) and the poses with RTAB-Map's own exporter
   stop                  kill a bridge that was left running
 """
@@ -26,6 +27,9 @@ def main():
     elif cmd in ("live", "replay"):
         from rtabmap_lab.live import main as live
         live(["--source", cmd] + rest)
+    elif cmd == "calib-lab":
+        from rtabmap_lab.calib_lab.server import main as lab
+        lab(rest)
     elif cmd == "export":
         if not rest:
             sys.exit("py -m rtabmap_lab export path/to/map.db [more rtabmap-export options]")

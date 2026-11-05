@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
     try { existing = replayDatabase(rtabmap, params, c); } catch (const std::exception &e) { sendLog(std::string("could not show the nodes of the loaded database: ") + e.what()); }
     { Buf b; b.put<int32_t>(existing); sendMsg(106, b); }
 
-    int lostCount = 0, nResets = 0, nFrames = 0; Transform lastGood = Transform::getIdentity();
+    int lostCount = 0, nResets = 0, nFrames = 0; Transform lastGood = Transform::getIdentity(), sinceGood = Transform::getIdentity();
     std::thread mapper(mapLoop, std::ref(rtabmap), std::cref(params), std::cref(c));
     for (;;) {
         if (!recvAll(h, 8)) break;
@@ -299,7 +299,18 @@ int main(int argc, char *argv[]) {
         int32_t id; double stamp;
         std::memcpy(&id, msg.data(), 4); std::memcpy(&stamp, msg.data() + 4, 8);
         const size_t npx = (size_t)c.w * c.h;
-        if (msg.size() != 12 + npx * 4) { sendLog("frame of the wrong size, skipped"); continue; }
+        const bool hasGyro = msg.size() == 12 + npx * 4 + 24;           // optional: rotation since the previous frame from an IMU (rotation vector, rad, optical frame)
+        if (msg.size() != 12 + npx * 4 && !hasGyro) { sendLog("frame of the wrong size, skipped"); continue; }
+        Transform gyroBase;                                                // the same rotation in RTAB-Map's base frame (x forward, y left, z up)
+        if (hasGyro) {
+            double rv[3]; std::memcpy(rv, msg.data() + 12 + npx * 4, 24);
+            cv::Mat R; cv::Rodrigues(cv::Mat(3, 1, CV_64F, rv), R);
+            const Transform Ropt(R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), 0, R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), 0,
+                                 R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2), 0);
+            const Transform opt = CameraModel::opticalRotation();
+            gyroBase = opt * Ropt * opt.inverse();
+            sinceGood = sinceGood * gyroBase;
+        }
         cv::Mat leftBGR(c.h, c.w, CV_8UC3, msg.data() + 12), right(c.h, c.w, CV_8UC1, msg.data() + 12 + npx * 3), gray;
         cv::cvtColor(leftBGR, gray, cv::COLOR_BGR2GRAY);
         UTimer total;
@@ -309,15 +320,18 @@ int main(int argc, char *argv[]) {
         try { pose = odom->process(data, &info); } catch (const std::exception &e) { sendLog(std::string("odometry: ") + e.what()); }
         const float odomMs = (float)(total.ticks() * 1000.0);
         if (!pose.isNull()) {
-            lastGood = pose; lostCount = 0;
+            lastGood = pose; lostCount = 0; sinceGood = Transform::getIdentity();
             MapJob job;
             job.data = data; job.pose = pose; job.id = id; job.valid = true; job.leftBGR = leftBGR.clone();
             job.cov = info.reg.covariance.empty() ? cv::Mat::eye(6, 6, CV_64FC1) * 0.01 : info.reg.covariance;
             { std::lock_guard<std::mutex> lk(g_jobMu); g_job = std::move(job); }   // the newest wins: the map update works at its own rate (Rtabmap/DetectionRate), older pairs are not queued
             g_jobCv.notify_one();
         } else if (++lostCount >= c.lostReset) {                            // the odometry has been lost for a while: start it again where it last was
-            odom->reset(lastGood); lostCount = 0; ++nResets;
-            sendLog("odometry lost for " + std::to_string(c.lostReset) + " frames: restarted at the last good pose");
+            // turned by the gyro's rotation since then: the rig usually loses tracking WHILE turning, and restarting at the old heading put every later wall at the wrong angle
+            const Transform restart = hasGyro ? lastGood * sinceGood : lastGood;
+            odom->reset(restart); lostCount = 0; ++nResets;
+            if (hasGyro) { lastGood = restart; sinceGood = Transform::getIdentity(); }
+            sendLog("odometry lost for " + std::to_string(c.lostReset) + " frames: restarted at the last good pose" + (hasGyro ? " turned by the gyro" : ""));
         }
         MapResult r;
         { std::lock_guard<std::mutex> lk(g_resMu); r = g_res; g_res.added = g_res.loopId = g_res.proxId = 0; g_res.mapMs = g_res.dispMs = 0.f; }

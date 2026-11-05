@@ -68,6 +68,10 @@ def gpu_tsdf(voxel=0.02, trunc=0.08, max_range=4.0, min_cluster_area=0.04, **opt
             t.set_poses({i: T})
         mesh = t.flush()
         v = np.asarray(mesh.vertices)
+        c = getattr(t.vol, "corrections", [])
+        if c:
+            acc = [x for x in c if x and x[4]]
+            print(f"    pose refinement: {len(acc)} of {len(c)} nodes moved" + (f", median {np.median([x[0] for x in acc]):.1f} mm / {np.median([x[1] for x in acc]):.2f} deg, p90 {np.percentile([x[0] for x in acc], 90):.1f} mm" if acc else ""), flush=True)
         t.close()
         return v, lambda path: o3d.io.write_triangle_mesh(path, mesh)
     return build
@@ -188,6 +192,9 @@ VARIANTS_FUSION2 = {
 }
 
 VARIANTS_GPU = {
+    "gpu + pose refinement": gpu_tsdf(refine=True),
+    "gpu, noise 0.5 px (measured)": gpu_tsdf(sigma_px=0.5),
+    "gpu, noise 0.5 px + pose refinement": gpu_tsdf(sigma_px=0.5, refine=True),
     "open3d tsdf 2cm / 8cm (baseline)": tsdf(0.02, 0.08),
     "gpu tsdf 2cm (nvblox-style, defaults)": gpu_tsdf(),
     "gpu, no free-space carving": gpu_tsdf(free_space=False),

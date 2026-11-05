@@ -129,3 +129,7 @@ from an obstacle; unknown ground is never counted as safe), and a least-cost rou
 camera (a camera 1.3 m up pitched 15 deg down first sees floor 1.9 m ahead) at a high cost and reports how much of the route is over ground not yet seen.
 Offline: `py -m rtabmap_lab.tools.nav_replay nodes.npz --calib <the run's calibration> --out nav.png`.
 It runs at node rate (about 2 per second at most). A walker needs the grid at camera rate: feed `NavMap.update` from a per-picture depth (LAS2 alone, 40 ms) and the odometry pose, bypassing the nodes.
+
+## Calibration lab (no board needed)
+
+`py -m rtabmap_lab calib-lab` opens a page where the stereo calibration is edited while RTAB-Map replays a recording, with an automatic check of the calibration from the footage. See `docs/calibration-lab.md`.

@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stereo Calibration Lab</title>
+<style>
+:root{--bg:#14171c;--panel:#1c2027;--panel2:#232831;--line:#323946;--text:#e6e9ee;--dim:#98a1b0;--accent:#4aa3ff;--good:#4cc38a;--warn:#e9b44c;--bad:#ec6a5e;--orange:#ff9f43}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:3px 8px}
+button{cursor:pointer}button:hover{border-color:var(--accent)}button.on{background:var(--accent);color:#06121f;border-color:var(--accent)}
+button.warn{border-color:var(--warn);color:var(--warn)}
+input[type=range]{padding:0;accent-color:var(--accent)}
+input[type=number]{width:92px}
+h3{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+#app{display:grid;grid-template-columns:minmax(420px,1.05fr) minmax(420px,1.1fr) minmax(380px,.9fr);grid-template-rows:auto 1fr;height:100%;gap:8px;padding:8px}
+#top{grid-column:1/4;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;min-height:0;min-width:0}
+.grow{flex:1;overflow:auto}
+#videos{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.vp{position:relative}.vp canvas{width:100%;display:block;border-radius:4px;background:#000;image-rendering:auto}
+.vp .tag{position:absolute;left:6px;top:4px;background:#000a;padding:1px 6px;border-radius:4px;font-size:11px}
+#view3d{position:relative;flex:1;min-height:320px;padding:0;overflow:hidden}
+#gl{position:absolute;inset:0}
+#labels div{position:absolute;pointer-events:none;background:#000b;color:#fff;border:1px solid #fff6;border-radius:4px;padding:0 5px;font-size:11px;transform:translate(8px,-8px);white-space:nowrap}
+#hud{position:absolute;left:8px;top:8px;display:flex;gap:6px;flex-wrap:wrap}
+#stalebanner{position:absolute;left:8px;right:8px;bottom:8px;background:#5a1d17ee;border:1px solid var(--bad);padding:6px 10px;border-radius:6px;display:none}
+.chip{padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}.chip.good{color:var(--good);border-color:var(--good)}.chip.warn{color:var(--warn);border-color:var(--warn)}.chip.bad{color:var(--bad);border-color:var(--bad)}
+.tabs{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap}.tabs button.on{font-weight:600}
+.tab{display:none}.tab.on{display:block}
+.prow{border-bottom:1px solid var(--line);padding:5px 0}
+.prow .l1{display:flex;align-items:center;gap:6px}.prow .nm{font-family:ui-monospace,Consolas,monospace;color:var(--accent);min-width:104px}
+.prow .lab{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow.changed .nm::after{content:" ●";color:var(--orange)}
+.prow .l2{display:flex;gap:6px;align-items:center;margin-top:3px}.prow .l2 input[type=range]{flex:1}
+.prow .orig{color:var(--dim);font-size:11px}
+.expl{display:none;background:var(--panel2);border-radius:6px;padding:6px 8px;margin-top:5px}.expl.on{display:block}
+.expl b{color:var(--orange)}.expl p{margin:3px 0}
+table{border-collapse:collapse;width:100%}td,th{padding:2px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--dim);font-weight:500}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--dim)}
+#log{max-height:240px;overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:11px}#log .error{color:var(--bad)}#log .warn{color:var(--warn)}
+.bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--accent)}
+details summary{cursor:pointer;color:var(--dim)}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+@media (max-width:1100px){#app{grid-template-columns:1fr;grid-template-rows:auto}#top{grid-column:1}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <b>Stereo Calibration Lab</b>
+    <span id="recinfo" class="dim"></span>
+    <span class="row"><button id="bRestart" title="Start RTAB-Map again from the clip start with the working calibration and an empty map">⏮ Restart</button>
+      <button id="bPlay" class="on">▶ Play</button><button id="bPause">⏸ Pause</button></span>
+    <span class="row" style="flex:1;min-width:260px"><input id="seek" type="range" min="0" max="1" value="0" style="flex:1"><span id="seekText" class="mono"></span></span>
+    <span class="row">clip <input id="clipA" type="number" style="width:64px"> – <input id="clipB" type="number" style="width:64px"><button id="bClip">set</button></span>
+    <label><input type="checkbox" id="cAuto" checked> restart RTAB-Map on every change</label>
+    <label><input type="checkbox" id="cLoop"> loop</label>
+    <span id="chips" class="row"></span>
+  </div>
+
+  <div class="col">
+    <div class="card"><h3>Pictures RTAB-Map receives (rectified with the working calibration)</h3>
+      <div class="row" style="margin-bottom:4px"><label><input type="checkbox" id="cWipe"> compare with pinned BEFORE</label>
+        <input type="range" id="wipe" min="0" max="1" step="0.01" value="0.5" style="flex:1;display:none"><span class="dim" id="wipeText"></span></div>
+      <div id="videos">
+        <div class="vp"><canvas id="v_left"></canvas><span class="tag">left</span></div>
+        <div class="vp"><canvas id="v_right"></canvas><span class="tag">right</span></div>
+        <div class="vp"><canvas id="v_disp"></canvas><span class="tag">stereo disparity (instant preview, click = distance)</span></div>
+        <div class="vp"><canvas id="v_rtab_disp"></canvas><span class="tag">RTAB-Map's own disparity (what the map uses)</span></div>
+      </div>
+      <div id="readout" class="mono" style="margin-top:4px;min-height:18px"></div>
+    </div>
+    <div class="card grow"><h3>Quality of the picture on screen</h3><div id="quality"></div></div>
+  </div>
+
+  <div class="col">
+    <div class="card" id="view3d">
+      <div id="gl"></div><div id="labels"></div>
+      <div id="hud">
+        <button id="bMeasure">📏 measure: click a surface</button>
+        <button id="bMesh" class="on">TSDF</button><button id="bRef">BEFORE mesh</button><button id="bTraj" class="on">path</button><button id="bFit">fit view</button>
+        <span id="meshInfo" class="chip"></span>
+      </div>
+      <div id="stalebanner"></div>
+    </div>
+    <div class="card" style="max-height:44%;overflow:auto"><h3>Measurements (metric, from the TSDF mesh of this run)</h3><div id="meas"><span class="dim">Turn on “measure” and click the 3D reconstruction.</span></div></div>
+  </div>
+
+  <div class="col">
+    <div class="card grow">
+      <div class="tabs" id="tabs"></div>
+      <div class="tab on" id="t_manual">
+        <div class="row" style="margin-bottom:6px"><button id="bResetAll" class="warn">reset ALL to the saved calibration</button><button id="bPin">📌 pin current as BEFORE</button><button id="bUnpin">unpin</button><span id="changedCount" class="dim"></span></div>
+        <div id="params"></div>
+        <h3 style="margin-top:10px">Derived by rectification (read only)</h3><div id="derived"></div>
+      </div>
+      <div class="tab" id="t_auto"></div>
+      <div class="tab" id="t_runs"></div>
+      <div class="tab" id="t_files"></div>
+      <div class="tab" id="t_log"><div id="log"></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/three.min.js"></script>
+<script src="/static/OrbitControls.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), dec=new TextDecoder();
+let DOC=null, STATE=null, ws=null, rowEls={}, imgs={}, wipePos=0.5, readout=null, lastCam=null, camHist=[];
+const send=o=>{ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); };
+const f=(v,d=2)=>v==null||!isFinite(v)?"–":Number(v).toFixed(d);
+
+/* ---------- websocket ---------- */
+function connect(){
+  ws=new WebSocket(`ws://${location.host}/ws`); ws.binaryType="arraybuffer";
+  ws.onclose=()=>setTimeout(connect,1000);
+  ws.onmessage=e=>{
+    const b=e.data, n=new DataView(b).getUint32(0,true);
+    const h=JSON.parse(dec.decode(new Uint8Array(b,4,n))), payload=b.slice(4+n);
+    handle(h,payload);
+  };
+}
+function handle(h,p){
+  switch(h.t){
+    case "doc": DOC=h; buildParams(); break;
+    case "state": STATE=h; renderState(); break;
+    case "img": { const blob=new Blob([p],{type:"image/jpeg"}), im=new Image(); im.onload=()=>{imgs[h.name]=im; imgs[h.name+"_idx"]=h.idx; draw(h.name); if(h.name==="ref_left")draw("left"); if(h.name==="ref_disp")draw("disp"); URL.revokeObjectURL(im.src);}; im.src=URL.createObjectURL(blob); break; }
+    case "mesh": setMesh(h,p); break;
+    case "camera": setCamera(h); break;
+    case "reset": onReset(h); break;
+    case "ref_clear": setMesh({which:"ref",nv:0,nt:0},new ArrayBuffer(0)); imgs.ref_left=imgs.ref_disp=null; draw("left"); draw("disp"); break;
+    case "log": addLog(h); break;
+    case "depth_readout": readout=h; $("readout").innerHTML=h.z==null?`<span class="warn">${h.text||"no disparity"}</span>`:`pixel (${h.x},${h.y}): disparity ${f(h.disparity,1)} px → <b>${f(h.z,3)} m</b> along the optical axis <span class="dim">(f·B / d, median of ${h.n} pixels)</span>`; draw("disp"); break;
+    case "ref_quality": if(STATE) renderQuality(); break;
+    case "compare": renderCompare(h); break;
+  }
+}
+connect();
+
+/* ---------- pictures ---------- */
+function draw(name){
+  const cv=$("v_"+name); if(!cv) return; const im=imgs[name]; if(!im) return;
+  cv.width=im.width; cv.height=im.height; const g=cv.getContext("2d"); g.drawImage(im,0,0);
+  const ref=imgs["ref_"+name];
+  if($("cWipe").checked && ref && (name==="left"||name==="disp")){
+    const x=Math.round(im.width*wipePos); g.save(); g.beginPath(); g.rect(0,0,x,im.height); g.clip(); g.drawImage(ref,0,0); g.restore();
+    g.strokeStyle="#fff"; g.lineWidth=2; g.beginPath(); g.moveTo(x,0); g.lineTo(x,im.height); g.stroke();
+    g.font="bold 13px sans-serif"; g.fillStyle="#ff9f43"; g.fillText("BEFORE",8,im.height-8); g.fillStyle="#4aa3ff"; g.fillText("AFTER",im.width-60,im.height-8);
+  }
+  if(name==="disp" && readout && readout.z!=null){ g.strokeStyle="#fff"; g.lineWidth=1.5; g.beginPath(); g.arc(readout.x,readout.y,8,0,7); g.moveTo(readout.x-14,readout.y); g.lineTo(readout.x+14,readout.y); g.moveTo(readout.x,readout.y-14); g.lineTo(readout.x,readout.y+14); g.stroke(); }
+}
+$("v_disp").addEventListener("click",e=>{ const cv=e.target, r=cv.getBoundingClientRect(); send({cmd:"depth_at",x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}); });
+$("cWipe").onchange=()=>{ $("wipe").style.display=$("cWipe").checked?"":"none"; draw("left"); draw("disp"); };
+$("wipe").oninput=e=>{ wipePos=+e.target.value; draw("left"); draw("disp"); };
+
+/* ---------- top bar ---------- */
+$("bPlay").onclick=()=>send({cmd:"play"}); $("bPause").onclick=()=>send({cmd:"pause"}); $("bRestart").onclick=()=>send({cmd:"restart"});
+$("seek").oninput=e=>send({cmd:"seek",idx:+e.target.value});
+$("bClip").onclick=()=>send({cmd:"set_clip",start:+$("clipA").value,end:+$("clipB").value});
+$("cAuto").onchange=e=>send({cmd:"set_flag",name:"auto_restart",value:e.target.checked}); $("cLoop").onchange=e=>send({cmd:"set_flag",name:"loop",value:e.target.checked});
+$("bResetAll").onclick=()=>send({cmd:"reset_all"}); $("bPin").onclick=()=>send({cmd:"pin"}); $("bUnpin").onclick=()=>send({cmd:"unpin"});
+
+/* ---------- tabs ---------- */
+const TABS=[["manual","Manual calibration"],["auto","Automatic"],["runs","Results"],["files","Save / load / compare"],["log","Log"]];
+TABS.forEach(([k,t])=>{ const b=document.createElement("button"); b.textContent=t; b.dataset.k=k; b.onclick=()=>showTab(k); $("tabs").appendChild(b); });
+function showTab(k){ document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===k)); document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.id==="t_"+k)); }
+showTab("manual");
+
+/* ---------- parameters ---------- */
+function buildParams(){
+  const host=$("params"); host.innerHTML=""; rowEls={};
+  let lastG=null, lastCam=null;
+  DOC.spec && Object.keys(DOC.spec).forEach(n=>{
+    const s=DOC.spec[n], d=DOC.docs[n];
+    if(s.group!==lastG){ const h=document.createElement("h3"); h.style.marginTop="10px"; h.textContent=DOC.groups[s.group]; host.appendChild(h); lastG=s.group; lastCam=null; }
+    if(s.camera!==lastCam && (s.camera==="left"||s.camera==="right")){ const h=document.createElement("div"); h.className="dim"; h.style.margin="6px 0 0"; h.textContent=(s.camera==="left"?"LEFT":"RIGHT")+" camera"; host.appendChild(h); lastCam=s.camera; }
+    const r=document.createElement("div"); r.className="prow";
+    r.innerHTML=`<div class="l1"><span class="nm">${n}</span><span class="lab">${d.label.replace(/^(left|right) /,"")}</span><button class="q" title="what is this?">?</button><button class="rs" title="reset this one to the saved value">↺</button></div>
+      <div class="l2"><input type="range" class="sl"><input type="number" class="nu"><span class="orig"></span></div>
+      <div class="expl">${["what","changes","why","used","behavior","guidance"].map(k=>`<p><b>${{what:"What it does",changes:"What it changes",why:"Why it matters",used:"Used by",behavior:"Too high / low / wrong",guidance:"What to watch while tuning"}[k]}:</b> ${d[k]}</p>`).join("")}<p class="dim">Parameter name: <span class="mono">${n}</span> · ${s.group} · ${s.camera}${d.unit?" · unit "+d.unit:""}</p></div>`;
+    host.appendChild(r);
+    const sl=r.querySelector(".sl"), nu=r.querySelector(".nu");
+    r.querySelector(".q").onclick=()=>r.querySelector(".expl").classList.toggle("on");
+    r.querySelector(".rs").onclick=()=>send({cmd:"reset_param",name:n});
+    let t=0; sl.oninput=()=>{ nu.value=(+sl.value).toFixed(decimals(s.step)); const now=Date.now(); if(now-t>90){t=now; send({cmd:"set_param",name:n,value:+sl.value});} };
+    sl.onchange=()=>send({cmd:"set_param",name:n,value:+sl.value});
+    nu.onchange=()=>send({cmd:"set_param",name:n,value:+nu.value});
+    rowEls[n]={r,sl,nu,orig:r.querySelector(".orig"),s};
+  });
+  const dv=$("derived"); dv.innerHTML=""; DOC.docs && Object.keys(DOC.docs).filter(n=>n.startsWith("rect.")&&!DOC.spec[n]).forEach(n=>{
+    const d=DOC.docs[n], r=document.createElement("div"); r.className="prow"; r.dataset.n=n;
+    r.innerHTML=`<div class="l1"><span class="nm">${n}</span><span class="lab">${d.label}</span><button class="q">?</button></div><div class="mono val" style="margin-top:2px"></div>
+      <div class="expl">${["what","changes","why","used","behavior","guidance"].map(k=>`<p><b>${{what:"What it is",changes:"What it changes",why:"Why it matters",used:"Used by",behavior:"If wrong",guidance:"What to watch"}[k]}:</b> ${d[k]}</p>`).join("")}</div>`;
+    r.querySelector(".q").onclick=()=>r.querySelector(".expl").classList.toggle("on"); dv.appendChild(r);
+  });
+}
+const decimals=st=>Math.max(0,Math.ceil(-Math.log10(st)));
+
+/* ---------- state ---------- */
+function renderState(){
+  const S=STATE, run=S.run;
+  const ri=S.recording; $("recinfo").textContent=`${ri.folder.split(/[\\/]/).pop()} · ${ri.pairs} pairs · ${ri.duration_s.toFixed(0)} s · ${ri.layout}`;
+  $("seek").max=ri.pairs-1; if(document.activeElement!==$("seek")) $("seek").value=S.cursor;
+  if(document.activeElement!==$("clipA")) $("clipA").value=S.clip[0]; if(document.activeElement!==$("clipB")) $("clipB").value=S.clip[1];
+  const tt=S.cursor/ (ri.pairs-1) * ri.duration_s;
+  $("seekText").textContent=`pair ${S.cursor}/${ri.pairs-1} · ${tt.toFixed(1)} s` + (run?` · RTAB-Map at ${run.pos} (${run.state})`:"");
+  $("cAuto").checked=S.auto_restart; $("cLoop").checked=S.loop;
+  const chips=[];
+  chips.push(`<span class="chip ${run&&run.state==="running"?"good":run&&run.state==="failed"?"bad":""}">RTAB-Map: ${run?run.state:"not started"}</span>`);
+  if(run) chips.push(`<span class="chip">map built with calibration ${run.fingerprint}</span>`);
+  chips.push(`<span class="chip">working calibration ${S.fingerprint}${S.changed.length?" ("+S.changed.length+" changed)":" (saved)"}</span>`);
+  if(S.stale) chips.push(`<span class="chip bad">map is STALE</span>`);
+  if(!S.recording_unchanged) chips.push(`<span class="chip bad">recording files changed!</span>`);
+  $("chips").innerHTML=chips.join("");
+  const sb=$("stalebanner");
+  if(S.stale){ sb.style.display="block"; sb.innerHTML=`<b>This 3D map is stale.</b> It was built with calibration <span class="mono">${run.fingerprint}</span>, you are editing <span class="mono">${S.fingerprint}</span> (${run.changed_since.join(", ")||"–"} differ). ${S.auto_restart&&["running","starting"].includes(run.state)?"RTAB-Map restarts from the clip start in a moment.":"Press Play or Restart: RTAB-Map starts again from the clip start with an empty map. Distances measured on the old map no longer belong to this calibration."}`; }
+  else sb.style.display="none";
+  $("bPlay").classList.toggle("on",!!run&&run.state==="running"); $("bPause").classList.toggle("on",!!run&&run.state==="paused");
+  if(rowEls && DOC){
+    for(const n in rowEls){
+      const p=S.params[n], e=rowEls[n], sp=e.s, lo=p.base-sp.span, hi=p.base+sp.span;
+      e.sl.min=Math.max(n==="rect.alpha"?0:-1e9,lo); e.sl.max=n==="rect.alpha"?1:hi; e.sl.step=sp.step;
+      if(document.activeElement!==e.sl) e.sl.value=p.value; if(document.activeElement!==e.nu) {e.nu.value=(+p.value).toFixed(decimals(sp.step)+1); e.nu.step=sp.step;}
+      e.r.classList.toggle("changed",p.changed); e.orig.textContent=p.changed?`saved ${(+p.original).toFixed(decimals(sp.step)+1)}`:"= saved";
+    }
+    document.querySelectorAll("#derived .prow").forEach(r=>{ const v=S.derived[r.dataset.n]; r.querySelector(".val").textContent=Array.isArray(v)?v.map(x=>Array.isArray(x)?x.map(y=>(+y).toFixed(3)).join("  "):x).join("\n"):(+v).toFixed(3); r.querySelector(".val").style.whiteSpace="pre"; });
+    $("changedCount").textContent=S.changed.length?`${S.changed.length} changed: ${S.changed.slice(0,4).join(", ")}${S.changed.length>4?" …":""}`:"identical to the saved calibration";
+  }
+  renderQuality(); renderAuto(); renderRuns(); renderFiles();
+}
+
+/* ---------- quality ---------- */
+function renderQuality(){
+  const S=STATE, q=S.quality||{}, rows=q.rows, ref=S.reference, rq=ref&&ref.quality, el=$("quality");
+  if(!rows){ el.innerHTML=`<span class="dim">Too few matched features in this picture to judge the rows (try another pair).</span>`; return; }
+  const rr=window.__refq||null;
+  const cell=(k,fmt=2)=>`<td>${f(rows[k],fmt)}</td>`;
+  const sm=q.smear_px;
+  el.innerHTML=`<table><tr><th>pair ${q.idx}</th><th>now</th><th class="warn">${ref?"BEFORE (pinned)":""}</th></tr>
+   <tr><td>row error, median |dy| (px)</td>${cell("row_err_px")}<td>${ref&&ref.quality&&ref.quality.rows?f(ref.quality.rows.row_err_px):""}</td></tr>
+   <tr><td>right picture lower than left (px)</td>${cell("dy_offset_px")}<td>${ref&&ref.quality&&ref.quality.rows?f(ref.quality.rows.dy_offset_px):""}</td></tr>
+   <tr><td>roll: rows drift per 100 px sideways</td>${cell("roll_slope")}<td>${ref&&ref.quality&&ref.quality.rows?f(ref.quality.rows.roll_slope):""}</td></tr>
+   <tr><td>rows drift per 100 px downward</td>${cell("scale_slope")}<td>${ref&&ref.quality&&ref.quality.rows?f(ref.quality.rows.scale_slope):""}</td></tr>
+   <tr><td>edges vs centre (px)</td><td>${f(rows.edge_px)} / ${f(rows.centre_px)}</td><td></td></tr>
+   <tr><td>matches with negative disparity</td><td>${f(rows.neg_disp_share*100,0)} %</td><td></td></tr>
+   <tr><td>valid disparity</td><td>${f((q.valid_share||0)*100,0)} %</td><td>${ref&&ref.quality?f(ref.quality.valid_share*100,0)+" %":""}</td></tr>
+   <tr><td>disparity noise on flat planes (px)</td><td>${f(q.sigma_d_px)}</td><td></td></tr>
+   <tr><td>matches used</td><td>${rows.n}</td><td></td></tr></table>
+   <p style="margin:6px 0 2px"><b>Reading:</b>${sm!=null&&sm>0.25?' <span class="warn">this pair is moving: the rows below partly measure the motion, not the calibration. Pause on a still pair before tuning by them.</span>':""}</p><ul style="margin:0;padding-left:18px;${sm!=null&&sm>0.25?"opacity:.5":""}">${(q.reading||[]).map(t=>`<li>${t}</li>`).join("")}</ul>
+   <p class="dim" style="margin:6px 0 0">${sm==null?"No gyro for this pair.":`Expected row mismatch just from the rig turning between the left and right exposures: <b class="${sm>0.25?"warn":""}">${f(sm)} px</b>${sm>0.25?" — this pair is moving too fast to judge the calibration by its rows.":" — small enough to judge."}`} Preview computed in ${f(q.ms,0)} ms.</p>`;
+}
+
+/* ---------- automatic ---------- */
+function renderAuto(){
+  const S=STATE, a=S.auto, el=$("t_auto"); const sig=JSON.stringify([a,S.clip,Object.fromEntries(Object.entries(S.params).map(([k,v])=>[k,v.value]))]); if(sig===autoSig) return; autoSig=sig;
+  let h=`<p>Checks and refines the calibration from the footage of the clip — no board. It matches natural features between left and right in sharp, slow pairs and measures how the cameras sit relative to each other.</p>
+   <div class="row"><button id="bAuto" class="on">Run the check</button><label><input type="checkbox" id="cWhole" ${window.__whole===false?"":"checked"}> whole recording (not only the clip)</label><span class="dim">up to 40 sharp, slow pairs, about 10 s</span></div>`;
+  if(a){
+    if(a.running) h+=`<div class="bar" style="margin:8px 0"><i style="width:${(a.progress||0)*100}%"></i></div><div class="dim">${a.verdict}</div>`;
+    else{
+      const v=a.verdict||"", cls=/^(RELIABLE|CONFIRMED)/.test(v)?"good":/^PARTIAL/.test(v)?"warn":"bad";
+      h+=`<h3 style="margin-top:10px">Verdict</h3><div class="${cls}" style="font-weight:600;font-size:14px">${v}</div>`;
+      if(a.frames_used!=null) h+=`<div class="dim">${a.frames_used} usable pairs of ${a.frames_asked}; skipped: ${Object.entries(a.skipped_reasons||{}).map(([k,v])=>v+"× "+k).join(", ")||"none"}</div>`;
+      if(a.data_confidence!=null||a.calibration_confidence!=null){
+        const pc=x=>x==null?"–":Math.round(x*100)+"%";
+        h+=`<h3 style="margin-top:10px">Confidence</h3><table><tr><td style="text-align:left">Data confidence (is there enough good footage?)</td><td><b>${pc(a.data_confidence)}</b></td></tr><tr><td style="text-align:left">Calibration confidence (does the current calibration fit?)</td><td><b>${pc(a.calibration_confidence)}</b></td></tr></table>`;
+      }
+      if(a.coverage) h+=`<h3 style="margin-top:10px">Coverage (matches per picture region, green = enough)</h3><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;max-width:320px">${a.coverage.flat().map(n=>`<div style="padding:8px 0;text-align:center;font-size:11px;background:${n>=20?"rgba(60,180,90,.45)":n>0?"rgba(220,170,40,.4)":"rgba(220,70,70,.4)"}">${n}</div>`).join("")}</div>`;
+      if(a.checks) h+=`<h3 style="margin-top:10px">Validation checks</h3><table>${a.checks.map(c=>`<tr><td style="text-align:left">${c[1]?'<span class="good">✓</span>':'<span class="bad">✗</span>'} ${c[0]}</td></tr><tr><td class="dim" style="text-align:left;white-space:normal;font-size:11px">${c[2]}</td></tr>`).join("")}</table>`;
+      if(a.row_err_current_px!=null) h+=`<p>Held-out pairs, median row error: <b>${f(a.row_err_current_px)} px</b> now → <b>${f(a.row_err_proposed_px)} px</b> with the proposal</p>`;
+      const pr=a.proposed||{}, names=Object.keys(pr);
+      if(names.length) h+=`<h3 style="margin-top:10px">Proposed changes</h3><table><tr><th>parameter</th><th>now</th><th>proposed</th><th>change</th></tr>${names.map(n=>`<tr><td class="mono">${n}</td><td>${f(S.params[n].value,3)}</td><td>${f(pr[n],3)}</td><td>${(pr[n]-S.params[n].value>=0?"+":"")+f(pr[n]-S.params[n].value,3)}</td></tr>`).join("")}</table>
+        <div class="row" style="margin-top:6px"><button id="bApplyAuto" class="on">Copy into the working calibration</button><input id="autoName" placeholder="name to save" style="width:150px"><button id="bSaveAuto">Save as automatic result</button></div>
+        <div class="dim">The automatic result stays separate: copying it only sets the sliders (RTAB-Map then restarts).</div>`;
+      if(a.diagnostic&&Object.keys(a.diagnostic).length) h+=`<h3 style="margin-top:10px">Estimated but NOT applied</h3><table>${Object.entries(a.diagnostic).map(([k,d])=>`<tr><td class="mono">${k}</td><td>${f(d.value,3)} ± ${f(d.std,3)}</td><td>${d.stable?"stable":"unstable"}</td></tr>`).join("")}</table>`;
+      if(a.unobservable&&a.unobservable.length) h+=`<h3 style="margin-top:10px">Cannot be known from the footage</h3><ul style="padding-left:18px;margin:0">${a.unobservable.map(u=>`<li><span class="mono">${u[0]}</span>: ${u[1]}</li>`).join("")}</ul>`;
+      h+=`<p class="dim">${a.note||""}</p>`;
+    }
+  }
+  h+=`<details style="margin-top:10px"><summary>How this works and what it cannot do</summary><p>Only the geometry inside each left/right pair is used (no frame-to-frame matching), so a moving rig is fine as long as the pair was exposed almost at once: pairs where the rig turns fast enough to shift the right picture by more than 0.25 px between the two exposures are skipped (gyro from the recording), as are blurred pairs. The pooled matches are fitted for pitch (R.rx_deg) and roll (R.rz_deg) of the right camera; each estimate gets a standard deviation and must agree between the even and the odd pairs. Only pitch and roll are ever applied, and only if the rows of pairs NOT used in the fit improve. The baseline length, the yaw (R.ry_deg) and the principal point x cannot be seen by matching rows — use a tape-measured distance (measure tool) for the baseline.</p></details>`;
+  el.innerHTML=h;
+  if($("bAuto")) $("bAuto").onclick=()=>{ window.__whole=$("cWhole").checked; send({cmd:"auto",n:40,whole:window.__whole}); };
+  if($("bApplyAuto")) $("bApplyAuto").onclick=()=>send({cmd:"apply_auto"});
+  if($("bSaveAuto")) $("bSaveAuto").onclick=()=>send({cmd:"save",kind:"auto",name:$("autoName").value||"result"});
+}
+
+/* ---------- results ---------- */
+const METRICS=[["odometry.lost_frames","odometry: lost frames",0],["odometry.restarts","odometry: restarts",0],["odometry.mean_inliers","odometry: mean inliers",0],["odometry.loop_closures","loop closures",0],
+  ["depth_consistency.median_rel","depth disagreement between overlapping nodes (%)",1,100],["depth_consistency.excess","  …beyond what depth noise explains (%)",1,100],["tsdf.median_mm","TSDF local roughness, median (mm)",1],["tsdf.spiky","TSDF vertices >1 cm off their plane (%)",0,100],["tsdf.vertices","TSDF vertices",0],
+  ["pictures.row_err_px","row error, median over sampled pairs (px)",2],["pictures.valid_share","valid disparity (%)",0,100],["pictures.sigma_d_px","disparity noise on planes (px)",2],["seconds","run time (s)",1]];
+const dig=(o,p)=>p.split(".").reduce((a,k)=>a==null?null:a[k],o);
+function metricRows(a,b){ return METRICS.map(([p,l,d,k])=>{ const x=dig(a,p), y=dig(b,p); const fx=x==null?"–":f(x*(k||1),d), fy=y==null?"–":f(y*(k||1),d); return `<tr><td>${l}</td><td>${fx}</td>${b?`<td>${fy}</td>`:""}</tr>`; }).join(""); }
+function renderRuns(){
+  const S=STATE, run=S.run, el=$("t_runs"); let h="";
+  const m=run&&run.metrics&&run.metrics.calibration?run.metrics:null, ref=S.reference&&S.reference.metrics;
+  if(lastCam) h+=`<h3>RTAB-Map now</h3><div class="mono">tracking ${lastCam.lost?'<span class="bad">LOST</span>':'<span class="good">ok</span>'} · ${lastCam.features} features · ${lastCam.inliers} inliers · ${lastCam.nodes} nodes · ${lastCam.loops} loops · ${f(lastCam.distance)} m · ${lastCam.restarts} restarts</div>`;
+  if(run&&run.error) h+=`<p class="bad">${run.error}</p>`;
+  h+=`<h3 style="margin-top:10px">Finished run${ref?" vs pinned BEFORE":""}</h3>`;
+  if(m) h+=`<table><tr><th></th><th>this run (${m.calibration})</th>${ref?`<th class="warn">BEFORE (${ref.calibration})</th>`:""}</tr>${metricRows(m,ref)}</table><div class="dim">clip ${m.clip[0]}–${m.clip[1]} · ${m.frames_sent} pairs sent · ${m.frames_skipped} skipped. Lower is better for every row except valid disparity, mean inliers and TSDF vertices.</div>`;
+  else h+=`<span class="dim">Metrics appear when RTAB-Map reaches the end of the clip (the run saves itself as an experiment).</span>`;
+  h+=`<p class="dim">A metric is only a fair comparison between two runs of the same recording and clip. “Depth disagreement” is the number that tells whether the map got more consistent; roughness and spikes are mostly depth noise.</p>`;
+  el.innerHTML=h;
+}
+
+/* ---------- files ---------- */
+let filesSig="", lastCompare=null, autoSig="";
+function renderFiles(){
+  const S=STATE, el=$("t_files"); const sig=JSON.stringify([S.configs,S.experiments,S.batch]); if(sig===filesSig) return; filesSig=sig;
+  const cfgs=S.configs;
+  let h=`<h3>Save the working calibration</h3><div class="row"><input id="saveName" placeholder="name" style="width:150px"><input id="saveNotes" placeholder="notes" style="flex:1"><button id="bSave">Save (manual)</button></div>
+   <div class="row" style="margin-top:6px"><input id="npzName" placeholder="name" style="width:150px"><button id="bNpz">Export as .npz for the real pipeline</button></div>
+   <h3 style="margin-top:12px">Saved calibrations</h3>${cfgs.length?`<table>${cfgs.map(c=>`<tr><td class="mono">${c.file}</td><td>${c.kind}</td><td class="dim">${c.created||""}</td><td><button data-load="${c.file}">load</button></td><td><input type="checkbox" data-pick="${c.file}"></td></tr>`).join("")}</table>`:'<span class="dim">none yet</span>'}
+   <div class="row" style="margin-top:6px"><button id="bCompare">compare ticked with …</button><select id="cmpB"><option value="working">working</option><option value="saved">saved (session start)</option>${cfgs.map(c=>`<option>${c.file}</option>`).join("")}</select>
+   <button id="bBatch" class="warn">replay the clip once per ticked calibration</button></div><div id="cmpOut"></div>
+   <div class="dim">Load applies a saved calibration to the pipeline at once (no application restart); RTAB-Map then starts again with it. Replay of several calibrations uses the same recording, clip and settings, one after the other, and stores every result as an experiment.</div>`;
+  if(S.batch) h+=`<div style="margin-top:6px">${S.batch.running?`batch ${S.batch.done}/${S.batch.total} …`:"batch finished"}${S.batch.rows.length?`<table><tr><th>calibration</th>${METRICS.slice(0,7).map(m=>`<th>${m[1].replace(/\(.*\)/,"")}</th>`).join("")}</tr>${S.batch.rows.map(r=>`<tr><td>${r.name}</td>${METRICS.slice(0,7).map(([p,l,d,k])=>{const x=dig(r.metrics,p);return `<td>${x==null?"–":f(x*(k||1),d)}</td>`}).join("")}</tr>`).join("")}</table>`:""}</div>`;
+  h+=`<h3 style="margin-top:12px">Experiments (one per finished run)</h3>${S.experiments.length?`<table><tr><th>id</th><th>clip</th><th>depth disagreement %</th><th>roughness mm</th><th>lost</th></tr>${S.experiments.map(e=>`<tr><td class="mono">${e.id}</td><td>${e.clip.join("–")}</td><td>${f((dig(e.metrics,"depth_consistency.median_rel")||NaN)*100,1)}</td><td>${f(dig(e.metrics,"tsdf.median_mm"),1)}</td><td>${dig(e.metrics,"odometry.lost_frames")}</td></tr>`).join("")}</table>`:'<span class="dim">none yet</span>'}
+   <p class="dim">Every experiment folder (data/calib_lab/experiments) holds the calibration, the recording path and file fingerprints, the clip, the settings, the metrics and the TSDF mesh: enough to repeat it.</p>
+   <h3 style="margin-top:12px">Measurements</h3><div class="row"><button id="bExport">save the measured points (JSON + CSV)</button></div>`;
+  el.innerHTML=h;
+  el.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>send({cmd:"load",name:b.dataset.load}));
+  $("bNpz").onclick=()=>send({cmd:"export_npz",name:$("npzName").value});
+  $("bSave").onclick=()=>send({cmd:"save",kind:"manual",name:$("saveName").value,notes:$("saveNotes").value});
+  const picked=()=>[...el.querySelectorAll("[data-pick]:checked")].map(x=>x.dataset.pick);
+  $("bCompare").onclick=()=>{ const p=picked(); send({cmd:"compare",a:p[0]||"saved",b:$("cmpB").value}); };
+  $("bBatch").onclick=()=>{ const p=picked(); if(p.length) send({cmd:"batch",names:p}); };
+  $("bExport").onclick=exportPoints;
+  if(lastCompare) renderCompare(lastCompare);
+}
+function renderCompare(c){
+  lastCompare=c; const box=$("cmpOut"); if(!box) return;
+  const rows=c.rows.length?c.rows.map(r=>`<tr><td class="mono">${r.name}</td><td>${f(r.a,4)}</td><td>${f(r.b,4)}</td><td>${(r.delta>=0?"+":"")+f(r.delta,4)}</td></tr>`).join(""):'<tr><td colspan=4 class="dim">identical numbers</td></tr>';
+  box.innerHTML=`<table style="margin-top:6px"><tr><th>parameter</th><th>${c.a} (${c.fingerprint_a})</th><th>${c.b} (${c.fingerprint_b})</th><th>b − a</th></tr>${rows}</table>`
+   +(c.metrics_a||c.metrics_b?`<table style="margin-top:6px"><tr><th>stored metrics</th><th>${c.a}</th><th>${c.b}</th></tr>${metricRows(c.metrics_a||{},c.metrics_b||{})}</table>`:'<div class="dim">no stored experiment for one or both: replay them (button above) to get metrics.</div>');
+}
+
+/* ---------- log ---------- */
+function addLog(h){ const d=document.createElement("div"); d.className=h.level; d.textContent=`${h.time}  ${h.text}`; $("log").appendChild(d); $("log").scrollTop=1e9; }
+
+/* ================= 3D ================= */
+const glHost=$("gl"), renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(devicePixelRatio); glHost.appendChild(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0d1014);
+const cam=new THREE.PerspectiveCamera(55,1,0.02,200); cam.up.set(0,0,1); cam.position.set(-2.2,-2.2,1.6);
+const controls=new THREE.OrbitControls(cam,renderer.domElement); controls.target.set(1.5,0,0.3); controls.update();
+scene.add(new THREE.HemisphereLight(0xffffff,0x445566,0.9)); const dl=new THREE.DirectionalLight(0xffffff,0.5); dl.position.set(1,-2,3); scene.add(dl);
+scene.add(new THREE.AxesHelper(0.3)); const grid=new THREE.GridHelper(10,20,0x334455,0x222a33); grid.rotation.x=Math.PI/2; scene.add(grid);
+const meshes={main:null,ref:null}; let fitted=false;
+const trajGeo=new THREE.BufferGeometry(), traj=new THREE.Line(trajGeo,new THREE.LineBasicMaterial({color:0xffc800})); scene.add(traj);
+const frus=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x4aa3ff})); frus.visible=false; scene.add(frus);
+const fp=[[0,0,0],[.1,.075,.15],[0,0,0],[-.1,.075,.15],[0,0,0],[.1,-.075,.15],[0,0,0],[-.1,-.075,.15],[.1,.075,.15],[-.1,.075,.15],[-.1,.075,.15],[-.1,-.075,.15],[-.1,-.075,.15],[.1,-.075,.15],[.1,-.075,.15],[.1,.075,.15]];
+frus.geometry.setAttribute("position",new THREE.BufferAttribute(new Float32Array(fp.flat()),3));
+function resize(){ const r=glHost.getBoundingClientRect(); renderer.setSize(r.width,r.height); cam.aspect=r.width/Math.max(r.height,1); cam.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(glHost); resize();
+function setMesh(h,p){
+  const w=h.which; if(meshes[w]){ scene.remove(meshes[w]); meshes[w].geometry.dispose(); meshes[w]=null; }
+  if(!h.nv){ return; }
+  const nv=h.nv, nt=h.nt, cb=Math.ceil(nv*3/4)*4;
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(p,0,nv*3),3));
+  if(w==="main") g.setAttribute("color",new THREE.BufferAttribute(new Uint8Array(p,nv*12,nv*3),3,true));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(p,nv*12+cb,nt*3),1));
+  g.computeVertexNormals(); g.computeBoundingSphere();
+  const mat=w==="main"?new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}):new THREE.MeshBasicMaterial({color:0xff9f43,wireframe:true,transparent:true,opacity:.35});
+  const m=new THREE.Mesh(g,mat); m.userData.fp=h.fingerprint; meshes[w]=m; scene.add(m); m.visible=w==="main"?$("bMesh").classList.contains("on"):$("bRef").classList.contains("on");
+  if(w==="main"){ $("meshInfo").textContent=`${nv.toLocaleString()} vertices`; if(!fitted){ fitView(); fitted=true; } }
+}
+function fitView(){ const m=meshes.main||meshes.ref; if(!m) return; const s=m.geometry.boundingSphere; controls.target.copy(s.center); const d=Math.max(s.radius*2.2,1.5); cam.position.copy(s.center).add(new THREE.Vector3(-d*.7,-d*.7,d*.5)); controls.update(); }
+$("bFit").onclick=fitView;
+const tg=(id,fn)=>{ $(id).onclick=()=>{ $(id).classList.toggle("on"); fn($(id).classList.contains("on")); }; };
+tg("bMesh",on=>{ if(meshes.main) meshes.main.visible=on; }); tg("bRef",on=>{ if(meshes.ref) meshes.ref.visible=on; }); tg("bTraj",on=>{ traj.visible=on; frus.visible=on&&lastCam!=null; });
+function onReset(h){ camHist=[]; trajGeo.setAttribute("position",new THREE.BufferAttribute(new Float32Array(0),3)); lastCam=null; fitted=false; if(meshes.main){scene.remove(meshes.main);meshes.main=null;} $("meshInfo").textContent="";
+  points.forEach(p=>{p.old=true;}); renderMeas(); }
+function setCamera(h){
+  lastCam=h; const T=h.pose; const M=new THREE.Matrix4().set(T[0][0],T[0][1],T[0][2],T[0][3],T[1][0],T[1][1],T[1][2],T[1][3],T[2][0],T[2][1],T[2][2],T[2][3],0,0,0,1);
+  frus.matrix.copy(M); frus.matrixAutoUpdate=false; frus.matrixWorldNeedsUpdate=true; frus.visible=$("bTraj").classList.contains("on");
+  camHist.push(T[0][3],T[1][3],T[2][3]); trajGeo.setAttribute("position",new THREE.BufferAttribute(new Float32Array(camHist),3)); trajGeo.setDrawRange(0,camHist.length/3);
+  points.forEach(updatePoint); renderMeas(true); if(STATE) renderRuns();
+}
+function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,cam); placeLabels(); }
+
+/* ---------- measuring ---------- */
+let measuring=false, points=[], nextId=1; const ray=new THREE.Raycaster(), labelHost=$("labels");
+$("bMeasure").onclick=()=>{ measuring=!measuring; $("bMeasure").classList.toggle("on",measuring); renderer.domElement.style.cursor=measuring?"crosshair":""; };
+let down=null; renderer.domElement.addEventListener("pointerdown",e=>{ down=[e.clientX,e.clientY]; });
+renderer.domElement.addEventListener("pointerup",e=>{
+  if(!measuring||!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>4) return;
+  const target=meshes.main||meshes.ref; if(!target) return;
+  const r=renderer.domElement.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);
+  const hit=ray.intersectObject(target,false)[0]; if(!hit) return;
+  const w=[hit.point.x,hit.point.y,hit.point.z], c=lastCam?[lastCam.pose[0][3],lastCam.pose[1][3],lastCam.pose[2][3]]:null;
+  const marker=new THREE.Mesh(new THREE.SphereGeometry(0.02,12,12),new THREE.MeshBasicMaterial({color:0xff3b8d})); marker.position.copy(hit.point); scene.add(marker);
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...(c||[0,0,0])),hit.point]),new THREE.LineDashedMaterial({color:0xffe14a,dashSize:.05,gapSize:.03})); scene.add(line);
+  const lab=document.createElement("div"); labelHost.appendChild(lab);
+  const p={id:nextId++,world:w,cam_pick:c,fp:target.userData.fp,run_fp:lastCam?lastCam.run:null,pos_pick:lastCam?lastCam.pos:null,marker,line,lab,old:false};
+  points.push(p); updatePoint(p); renderMeas();
+});
+const dist=(a,b)=>a&&b?Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]):null;
+function camPos(){ return lastCam?[lastCam.pose[0][3],lastCam.pose[1][3],lastCam.pose[2][3]]:null; }
+function updatePoint(p){
+  const c=camPos(); p.dist_now=p.old?null:dist(p.world,c); p.dist_pick=dist(p.world,p.cam_pick); p.dist_origin=dist(p.world,[0,0,0]);
+  if(c&&!p.old){ p.line.geometry.setFromPoints([new THREE.Vector3(...c),new THREE.Vector3(...p.world)]); p.line.computeLineDistances(); }
+  p.lab.textContent=`#${p.id}  ${f(p.dist_now!=null?p.dist_now:p.dist_pick,3)} m`+(p.old?" (old map)":""); p.lab.style.borderColor=p.old?"#888":"#fff";
+  p.marker.material.color.set(p.old?0x888888:0xff3b8d); p.line.material.color.set(p.old?0x666666:0xffe14a);
+}
+function placeLabels(){ const r=renderer.domElement.getBoundingClientRect(); points.forEach(p=>{ const v=new THREE.Vector3(...p.world).project(cam); const vis=v.z<1; p.lab.style.display=vis?"block":"none"; p.lab.style.left=((v.x+1)/2*r.width)+"px"; p.lab.style.top=((1-v.y)/2*r.height)+"px"; }); }
+let lastMeasDraw=0;
+function renderMeas(soft){
+  if(soft&&Date.now()-lastMeasDraw<250) return; lastMeasDraw=Date.now();
+  const el=$("meas"); if(!points.length){ el.innerHTML='<span class="dim">Turn on “measure” and click the 3D reconstruction.</span>'; return; }
+  const cp=camPos();
+  let h=`<div class="dim" style="margin-bottom:4px">Metres, RTAB-Map map frame (x forward, y left, z up; origin = the camera at the start of the run). “from camera now” follows the live camera pose (${cp?`now at ${cp.map(v=>f(v,2)).join(", ")}`:"no pose yet"}); “at pick” is frozen when you clicked.</div>
+   <table><tr><th>#</th><th>x</th><th>y</th><th>z</th><th>from camera now</th><th>from camera at pick</th><th>from map origin</th><th>tape (cm)</th><th></th></tr>`;
+  points.forEach(p=>{ h+=`<tr style="${p.old?"opacity:.55":""}"><td>${p.id}${p.old?" ⚠":""}</td><td>${f(p.world[0],3)}</td><td>${f(p.world[1],3)}</td><td>${f(p.world[2],3)}</td><td><b>${f(p.dist_now,3)}</b></td><td>${f(p.dist_pick,3)}</td><td>${f(p.dist_origin,3)}</td>
+     <td><input type="number" data-tape="${p.id}" style="width:62px"></td><td><button data-scale="${p.id}" title="Set the baseline so this point's distance at pick equals the tape measurement">set baseline</button> <button data-del="${p.id}">✕</button></td></tr>`; });
+  h+="</table>";
+  if(points.length>1){ h+=`<h3 style="margin-top:8px">Between points</h3><table>`; for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++) h+=`<tr><td>#${points[i].id} ↔ #${points[j].id}</td><td><b>${f(dist(points[i].world,points[j].world),3)} m</b></td></tr>`; h+="</table>"; }
+  if(points.some(p=>p.old)) h+=`<div class="warn" style="margin-top:4px">⚠ points marked “old map” were picked on a map built with other calibration numbers; their distances belong to that map, not to the one on screen.</div>`;
+  el.innerHTML=h;
+  const keep={}; el.querySelectorAll("[data-tape]").forEach(i=>i.onchange=()=>{ keep[i.dataset.tape]=i.value; });
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ const p=points.find(x=>x.id==b.dataset.del); scene.remove(p.marker,p.line); p.lab.remove(); points=points.filter(x=>x!==p); renderMeas(); });
+  el.querySelectorAll("[data-scale]").forEach(b=>b.onclick=()=>{ const id=b.dataset.scale, inp=el.querySelector(`[data-tape="${id}"]`), cm=parseFloat(inp.value); const p=points.find(x=>x.id==id);
+    if(!(cm>0)) return alert("Type the tape-measured distance (cm) first."); if(p.old) return alert("This point is on an old map."); send({cmd:"scale_to_distance",measured_m:p.dist_pick,true_m:cm/100}); });
+}
+function exportPoints(){ send({cmd:"export",points:points.map(p=>({id:p.id,world:p.world,camera_at_pick:p.cam_pick,dist_pick:p.dist_pick,dist_now:p.dist_now,dist_origin:p.dist_origin,map_calibration:p.fp,old_map:p.old,pair_at_pick:p.pos_pick}))}); }
+animate();
+</script>
+</body>
+</html>

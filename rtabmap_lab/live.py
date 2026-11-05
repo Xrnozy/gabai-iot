@@ -35,6 +35,13 @@ def frames(a):
         ov["source.port"] = a.port
     else:
         ov.update({"source.folder": a.folder, "source.max_frames": 0})
+    if a.calib:
+        ov["source.calib"] = a.calib
+    elif a.source == "replay":                                                # a recording is only rectified right by the calibration it was made with (the cameras move in their mounts between sessions)
+        import json
+        rc = json.load(open(os.path.join(a.folder, "meta.json"))).get("calibration", {}).get("file")
+        if rc and os.path.exists(rc):
+            ov["source.calib"] = rc
     cfg = PipelineConfig.load(a.pipeline_config, ov)
     if a.source == "live":
         rect = Rectifier(cfg.source.calib)
@@ -58,7 +65,14 @@ def run(a):
         v = orientation.from_recording(a.folder, imu_sync=cfg.source.imu_sync)
         flip, judged = v["decision"] == "flip", True
         print("orientation check (accelerometer as an outside judge only):", v["reason"], flush=True)
-    imu_rows = []
+    imu_rows, gyro_rows, R_ic = [], [], orientation.load_R_ic(cfg.source.imu_sync)
+    from rtabmap_lab.rolling_shutter import ShutterCorrection
+    shutter = ShutterCorrection.load(a.shutter_file) if a.shutter_fix else None
+    if a.shutter_fix:
+        print(f"rolling-shutter correction (gyro): {'from ' + a.shutter_file if shutter else 'off, ' + a.shutter_file + ' not found'}", flush=True)
+    rec_imu, rec_t = None, -np.inf                                         # replay: the recording's imu.csv (the replay source gives no IMU rows); same clock as t_capture
+    if a.source == "replay" and os.path.exists(os.path.join(a.folder, "imu.csv")):
+        rec_imu = np.loadtxt(os.path.join(a.folder, "imu.csv"), delimiter=",", skiprows=1)
     bridge = Bridge(db=db or "", port=a.bridge_port, localize=a.localize, config=a.config, extra=a.rtabmap_arg)
     print(f"RTAB-Map bridge up. map database: {db or '(memory only)'}{'  [localization only]' if a.localize else ''}", flush=True)
     dash, n_sent, started, last_pair, tsdf, upgrader, surfels = None, 0, None, None, None, None, None
@@ -83,9 +97,12 @@ def run(a):
                 dash.raw_points, dash.flatten = a.raw_points, a.flatten
                 if a.depth != "rtabmap":
                     from rtabmap_lab.gabai_depth import DepthUpgrader, GabaiDepth
-                    print({"gabai": "loading the GabAi depth chain (LAS2 + Depth Anything V2 on both pictures)", "ffs": "loading Fast-FoundationStereo", "fused": "loading FFS, LAS2 and Depth Anything V2 for the fusion"}[a.depth] + " ...", flush=True)
+                    print({"gabai": "loading the GabAi depth chain (LAS2 + Depth Anything V2 on both pictures)", "ffs": "loading Fast-FoundationStereo", "sgbm": "SGBM + texture mask + WLS (CPU, no model)", "fused": "loading FFS, LAS2 and Depth Anything V2 for the fusion"}[a.depth] + " ...", flush=True)
                     if a.depth == "gabai":
                         depth_model = GabaiDepth(cfg)
+                    elif a.depth == "sgbm":
+                        from rtabmap_lab.sgbm_depth import SgbmDepth
+                        depth_model = SgbmDepth(max_std=a.max_depth_std)
                     else:
                         from rtabmap_lab.fused_source import FusionDepth
                         depth_model = FusionDepth(a.depth)
@@ -96,9 +113,9 @@ def run(a):
                 if not a.no_tsdf:
                     if a.tsdf_backend == "gpu":
                         from rtabmap_lab.gpu_tsdf import GpuTsdfMap
-                        tsdf = GpuTsdfMap((c["f"], c["f"], c["cx"], c["cy"]), (w, h), voxel=a.tsdf_voxel, trunc=a.tsdf_trunc, max_range=a.max_range, fb=c["f"] * c["B"], on_mesh=dash.mesh)
+                        tsdf = GpuTsdfMap((c["f"], c["f"], c["cx"], c["cy"]), (w, h), voxel=a.tsdf_voxel, trunc=a.tsdf_trunc, max_range=a.max_range, fb=c["f"] * c["B"], on_mesh=dash.mesh, blur_keep=a.blur_keep)
                     else:
-                        tsdf = TsdfMap((c["f"], c["f"], c["cx"], c["cy"]), (w, h), voxel=a.tsdf_voxel, trunc=a.tsdf_trunc, max_range=a.max_range, on_mesh=dash.mesh)
+                        tsdf = TsdfMap((c["f"], c["f"], c["cx"], c["cy"]), (w, h), voxel=a.tsdf_voxel, trunc=a.tsdf_trunc, max_range=a.max_range, on_mesh=dash.mesh, blur_keep=a.blur_keep)
                     dash.sinks.append(tsdf)
                     dash.tsdf = tsdf
                 if not a.no_nav:
@@ -106,6 +123,16 @@ def run(a):
                     dash.sinks.append(NavSink(NavMap(cell_m=a.nav_cell), c["f"], c["cx"], c["cy"], on_update=dash.nav))
                 print(f"stereo {w}x{h}, f={c['f']:.1f}px, baseline={c['B'] * 1000:.1f} mm ({'metric' if c.get('metric') else 'ASSUMED'}); pictures turned 180 deg: {flip}", flush=True)
 
+            if rec_imu is not None and not fr.imu:
+                sel = (rec_imu[:, 0] > rec_t) & (rec_imu[:, 0] <= fr.t)
+                fr.imu = [(r[0], np.radians(r[1:4]), r[4:7] * 9.80665) for r in rec_imu[sel]]
+                rec_t = fr.t
+            if shutter is not None and R_ic is not None:                   # opposite rolling shutters: the right picture resampled at the left picture's time, row by row (rtabmap_lab/rolling_shutter.py)
+                recent = [r[1] for r in fr.imu if fr.t - r[0] < 0.02]
+                if recent:
+                    F = np.diag([-1.0, -1.0, 1.0]) if flip else np.eye(3)
+                    dts = fr.sync.get("pair_dt_signed_ms")
+                    fr.right = shutter.correct(fr.right, F @ R_ic.T @ np.mean(recent, 0), c["f"], c["cx"], c["cy"], flip, None if dts is None else (-dts if flip else dts))
             for m in bridge.poll():
                 handle(m, dash, fr.left)
             right_gray = cv2.cvtColor(fr.right, cv2.COLOR_BGR2GRAY)
@@ -113,7 +140,10 @@ def run(a):
                 bridge.wait_idle()                                            # a recording: every pair is used, in order
             if upgrader is not None:
                 upgrader.remember(fr.idx, fr.left, fr.right)
-            if bridge.send_frame(fr.idx, fr.t, fr.left, right_gray):
+            gyro_rows += fr.imu                                            # the gyro since the last SENT pair: the bridge keeps the heading with it when the odometry is lost
+            gyro = orientation.gyro_rotvec([r[0] for r in gyro_rows], [r[1] for r in gyro_rows], R_ic, flip, fr.t) if a.gyro and gyro_rows and n_sent else None
+            if bridge.send_frame(fr.idx, fr.t, fr.left, right_gray, gyro):
+                gyro_rows = []
                 n_sent += 1
                 dash.at(fr.idx, fr.t)
                 dash.pair(fr.left, fr.right)
@@ -210,12 +240,17 @@ def add_args(ap):
     ap.add_argument("--no-flip180", dest="orientation", action="store_const", const="as-is", help="same as --orientation as-is")
     ap.add_argument("--cloud-stride", type=int, default=4, help="every Nth pixel of the disparity becomes a map point")
     ap.add_argument("--min-range", type=float, default=0.3)
-    ap.add_argument("--max-range", type=float, default=4.0, help="metres: with a 42 mm baseline depth beyond this is mostly noise")
+    ap.add_argument("--max-range", type=float, default=2.5, help="metres of depth used: the real disparity noise is about 1 px (14 cm at 2 m); on walk_20261102 2.5 m gave the map closest to held-out pictures (4 m: 4.02 px, 2.5 m: 3.72, 2 m: 3.84)")
+    ap.add_argument("--blur-keep", type=float, default=0.75, help="fuse a node's depth into the TSDF only if its picture is among the sharpest this share of recent nodes (1 = all)")
     ap.add_argument("--max-depth-std", type=float, default=0.08, help="drop depth whose expected noise z^2 * 0.3 px / (f * baseline) is above this many metres (0.08 keeps about 2.6 m with this rig); 0 = keep all")
     ap.add_argument("--disparity-every", type=int, default=3, help="show RTAB-Map's disparity every Nth frame")
+    ap.add_argument("--gyro", action="store_true", help="give the bridge the gyro rotation between pairs, used only to keep the heading when the odometry restarts after being lost (off: pictures only)")
+    ap.add_argument("--shutter-fix", action="store_true", help="resample the right picture at the left picture's time from the gyro (rtabmap_lab/rolling_shutter.py; off by default)")
+    ap.add_argument("--shutter-file", default="data/rolling_shutter.json", help="the rig's measured rolling-shutter readout (py -m rtabmap_lab.rolling_shutter <recording> --save ...)")
+    ap.add_argument("--calib", help="stereo calibration (.npz). Default: replay uses the one the recording was made with (its meta.json), live the one in --pipeline-config")
     ap.add_argument("--lost-reset", type=int, default=15, help="restart the odometry at its last pose after this many lost frames in a row")
     ap.add_argument("--max-frames", type=int, default=0)
-    ap.add_argument("--depth", default="rtabmap", choices=["rtabmap", "gabai", "ffs", "fused"], help="rtabmap: RTAB-Map's own stereo matching (SGBM) for the TSDF and the points; gabai: the main system's depth (LAS2 stereo + Depth Anything V2 on both pictures, "
+    ap.add_argument("--depth", default="rtabmap", choices=["rtabmap", "gabai", "ffs", "sgbm", "fused"], help="rtabmap: RTAB-Map's own stereo matching (SGBM) for the TSDF and the points; sgbm: OpenCV SGBM + texture mask + WLS, failed pixels stay empty (rtabmap_lab/sgbm_depth.py); gabai: the main system's depth (LAS2 stereo + Depth Anything V2 on both pictures, "
                     "fused), computed on the GPU for each new node. The poses are RTAB-Map's either way")
     ap.add_argument("--no-surfels", action="store_true", help="skip the surfel map (the main 3D view)")
     ap.add_argument("--min-views", type=int, default=2, help="a surfel is drawn only when this many pictures agree on it (1 = no check; 3 = cleaner and sparser)")

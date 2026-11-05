@@ -67,3 +67,7 @@ rtabmap_lab/runs/
 rtabmap_lab/deps/
 *.ply
 *.zip
+
+# Built bridge (python -m mapper.build_bridge)
+mapper/bridge/build/
+mapper/bin/
